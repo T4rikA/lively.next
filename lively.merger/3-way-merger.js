@@ -1,3 +1,4 @@
+import { Color, Point } from 'lively.graphics';
 // soruce: https://github.com/falsecz/3-way-merge/blob/master/index.coffee
 
 /**
@@ -36,12 +37,27 @@ export function merge (o, a, b) {
     }
   } else {
     if (Array.isArray(a)) a = {};
-    for (k in b) result[k] = b[k];
+    for (k in b) if (k !== 'style') result[k] = b[k];
     for (k in a) {
+      if (k === 'style') continue;
       if (!a[k] in result) {
         result[k] = a[k];
       } else if (a[k] !== result[k]) {
-        if (typeof a[k] === 'object' && typeof (b ? b[k] : undefined) === 'object') {
+        if (a[k].isColor && result[k].isColor) {
+          const merge_result = merge(
+            JSON.parse(JSON.stringify(o[k])),
+            JSON.parse(JSON.stringify(a[k])),
+            JSON.parse(JSON.stringify(b[k]))
+          );
+          result[k] = Color.fromTuple(Object.values(merge_result));
+        } else if (a[k].isPoint && result[k].isPoint) {
+          const merge_result = merge(
+            JSON.parse(JSON.stringify(o[k])),
+            JSON.parse(JSON.stringify(a[k])),
+            JSON.parse(JSON.stringify(b[k]))
+          );
+          result[k] = Point.fromTuple(Object.values(merge_result));
+        } else if (typeof a[k] === 'object' && typeof (b ? b[k] : undefined) === 'object') {
           ov = !!o && k in o && typeof o[k] === 'object' ? o[k] : {};
           result[k] = merge(ov, a[k], b[k]);
         } else if ((b ? b[k] : undefined) === (o ? o[k] : undefined)) {
