@@ -3,14 +3,12 @@ export class Differ {
   static diffMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {
-      $world.setStatusMessage('Cant diff morphs, morph1 not found');
-      return {};
+      throw new Error(`Cant diff morphs, morph1 with id ${morph1id} not found`);
     }
 
     const morph2 = $world.submorphs.filter(morph => morph.id === morph2id)[0];
     if (!morph2) {
-      $world.setStatusMessage('Cant diff morphs, morph2 not found');
-      return {};
+      throw new Error(`Cant diff morphs, morph2 with id ${morph2id} not found`);
     }
 
     return this.diffMorphs(morph1, morph2);
@@ -18,8 +16,7 @@ export class Differ {
 
   static diffMorphs (morph1, morph2) {
     if (JSON.stringify(morph1.styleClasses) != JSON.stringify(morph2.styleClasses)) {
-      $world.setStatusMessage('Cant diff morphs, classes differ');
-      return {};
+      throw new Error('Cant diff morphs, styleclasses differ');
     }
 
     const firstMorphProperties = morph1.propertiesAndPropertySettings().properties;
