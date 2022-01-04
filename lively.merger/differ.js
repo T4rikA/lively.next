@@ -1,4 +1,5 @@
 import { Color } from 'lively.graphics';
+
 export class Differ {
   static diffMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
@@ -15,6 +16,10 @@ export class Differ {
   }
 
   static diffMorphs (morph1, morph2) {
+    if (!morph1.styleClasses || !morph1.styleClasses.includes('morph') || !morph2.styleClasses || !morph2.styleClasses.includes('morph')) {
+      throw new Error('Cannot diff objects that are not morphs');
+    }
+
     if (JSON.stringify(morph1.styleClasses) != JSON.stringify(morph2.styleClasses)) {
       throw new Error('Cannot diff morphs, styleclasses differ');
     }
