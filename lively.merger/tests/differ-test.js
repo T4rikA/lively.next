@@ -23,6 +23,11 @@ describe('lively.merger >> Differ', () => {
     morph2.openInWorld();
   });
 
+  afterEach(() => {
+    morph1.abandon();
+    morph2.abandon();
+  });
+
   describe('#diffMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
@@ -79,7 +84,7 @@ describe('lively.merger >> Differ', () => {
       expect(matchingProperties).to.equal(allProperties);
     });
 
-    it("detects a changed properties as 'differing'", () => {
+    it("detects a changed property as 'differing'", () => {
       morph2.fill = Color.red;
 
       const diffingResult = Differ.diffMorphs(morph1, morph2);
@@ -97,10 +102,5 @@ describe('lively.merger >> Differ', () => {
       expect(!Object.keys(diffingResult.differingProperties).includes('fill'));
       expect(Object.keys(diffingResult.matchingProperties).includes('fill'));
     });
-  });
-
-  afterEach(() => {
-    morph1.abandon();
-    morph2.abandon();
   });
 });
