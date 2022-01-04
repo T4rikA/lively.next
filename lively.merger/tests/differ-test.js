@@ -40,12 +40,6 @@ describe('lively.merger >> Differ', () => {
         Differ.diffMorphsWithIds(morph1.id, 'morph2id');
       }).to.throw('Cannot diff morphs, morph2 with id morph2id not found');
     });
-
-    it('runs without error if both morphs are alive', () => {
-      expect(() => {
-        Differ.diffMorphsWithIds(morph1.id, morph2.id);
-      }).not.to.throw();
-    });
   });
 
   describe('#diffMorphs', () => {
