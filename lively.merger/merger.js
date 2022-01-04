@@ -6,13 +6,13 @@ export class Merger {
   static mergeMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {
-      $world.setStatusMessage('Cant diff morphs, morph1 not found');
+      throw new Error(`Cannot merge morphs, morph1 with id ${morph1id} not found`);
       return;
     }
 
     const morph2 = $world.submorphs.filter(morph => morph.id === morph2id)[0];
     if (!morph2) {
-      $world.setStatusMessage('Cant diff morphs, morph2 not found');
+      throw new Error(`Cannot merge morphs, morph2 with id ${morph2id} not found`);
       return;
     }
 
@@ -20,8 +20,12 @@ export class Merger {
   }
 
   static mergeMorphs (morph1, morph2) {
+    if (!morph1.styleClasses || !morph1.styleClasses.includes('morph') || !morph2.styleClasses || !morph2.styleClasses.includes('morph')) {
+      throw new Error('Cannot merge objects that are not morphs');
+    }
+
     if (JSON.stringify(morph1.styleClasses) != JSON.stringify(morph2.styleClasses)) {
-      throw new Error(`Classes differ, can't merge morphs: ${JSON.stringify(morph1.styleClasses)}, ${JSON.stringify(morph2.syleClasses)}`);
+      throw new Error('Cannot merge morphs, styleclasses differ');
     }
 
     let testMorph = new Morph();
