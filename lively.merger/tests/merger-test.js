@@ -19,6 +19,45 @@ describe('lively.merger >> Merger', () => {
     morph2.abandon();
   });
 
+  describe('#propertiesFromMorph', () => {
+    it('returns all properties except styleProperties', () => {
+      const properties = Merger.propertiesFromMorph(morph1);
+      const referenceProperties = morph1.propertiesAndPropertySettings().properties;
+
+      Object.keys(referenceProperties).forEach(key => {
+        if (key !== 'styleProperties') expect(properties).to.have.property(key);
+      });
+
+      Object.keys(properties).forEach(key => {
+        expect(referenceProperties).to.have.property(key);
+      });
+    });
+  });
+
+  describe('#isMorph', () => {
+    it('returns true on morphs', () => {
+      expect(Merger.isMorph(morph1)).to.be.true;
+    });
+
+    it('returns true on morph subclasses', () => {
+      class tmp extends Morph {}
+      expect(Merger.isMorph(new tmp())).to.be.true;
+    });
+
+    it('returns false on javascript dictionaries', () => {
+      expect(Merger.isMorph({})).to.be.falsey;
+    });
+
+    it('returns false on javascript arrays', () => {
+      expect(Merger.isMorph([])).to.be.falsey;
+    });
+
+    it('returns false on custom objects that are not morph subclasses', () => {
+      class tmp {}
+      expect(Merger.isMorph(new tmp())).to.be.falsey;
+    });
+  });
+
   describe('#mergeMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
@@ -53,8 +92,7 @@ describe('lively.merger >> Merger', () => {
     it('returns a morph', () => {
       const merged = Merger.mergeMorphs(morph1, morph2);
 
-      expect(merged.styleClasses).to.not.be.null;
-      expect(merged.styleClasses.includes('morph')).to.be.true;
+      expect(merged).to.be.an.instanceOf(Morph);
     });
 
     it('returns a morph with combined properties', () => {
