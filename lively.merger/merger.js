@@ -3,6 +3,18 @@ import { merge } from './3-way-merger.js';
 import { Morph } from 'lively.morphic';
 
 export class Merger {
+  static propertiesFromMorph (morph) {
+    const properties = {};
+    Object.keys(morph.propertiesAndPropertySettings().properties).forEach(key => {
+      if (key !== 'styleProperties') { properties[key] = morph[key]; }
+    });
+    return properties;
+  }
+
+  static isMorph (obj) {
+    return obj.styleClasses && obj.styleClasses.includes('morph');
+  }
+
   static mergeMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {
@@ -20,7 +32,7 @@ export class Merger {
   }
 
   static mergeMorphs (morph1, morph2) {
-    if (!morph1.styleClasses || !morph1.styleClasses.includes('morph') || !morph2.styleClasses || !morph2.styleClasses.includes('morph')) {
+    if (!this.isMorph(morph1) || !this.isMorph(morph2)) {
       throw new Error('Cannot merge objects that are not morphs');
     }
 
@@ -28,20 +40,14 @@ export class Merger {
       throw new Error('Cannot merge morphs, styleclasses differ');
     }
 
-    let testMorph = new Morph();
-    let propertiesMorph1 = {};
-    let propertiesMorph2 = {};
-    let propertiesTestMorph = {};
-    Object.keys(morph1.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph1[key] = morph1[key]; }
-    });
-    Object.keys(morph2.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph2[key] = morph2[key]; }
-    });
-    Object.keys(testMorph.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesTestMorph[key] = testMorph[key]; }
-    });
-    let properties = merge(propertiesTestMorph,
+    let baseMorph = new Morph();
+    let propertiesBaseMorph = this.propertiesFromMorph(baseMorph);
+
+    let propertiesMorph1 = this.propertiesFromMorph(morph1);
+    let propertiesMorph2 = this.propertiesFromMorph(morph2);
+
+    let properties = merge(
+      propertiesBaseMorph,
       propertiesMorph1,
       propertiesMorph2);
     return new Morph(properties);
