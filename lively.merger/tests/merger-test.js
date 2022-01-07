@@ -31,19 +31,6 @@ describe('lively.merger >> Merger', () => {
         Merger.mergeMorphsWithIds(morph1.id, 'morph2id');
       }).to.throw('Cannot merge morphs, morph2 with id morph2id not found');
     });
-
-    it('runs without error if both morphs are alive', () => {
-      expect(() => {
-        Merger.mergeMorphsWithIds(morph1.id, morph2.id);
-      }).not.to.throw();
-    });
-
-    it('returns a new morph', () => {
-      const merged = Merger.mergeMorphsWithIds(morph1.id, morph2.id);
-
-      expect(merged.styleClasses).to.not.be.null;
-      expect(merged.styleClasses.includes('morph')).to.be.true;
-    });
   });
 
   describe('#mergeMorphs', () => {
@@ -75,6 +62,7 @@ describe('lively.merger >> Merger', () => {
       morph2.name = 'name2';
 
       const merged = Merger.mergeMorphs(morph1, morph2);
+
       expect(merged.name).to.equal('name2');
       expect(merged.fill).to.equal(Color.red);
     });
