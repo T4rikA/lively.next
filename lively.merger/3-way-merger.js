@@ -10,9 +10,9 @@ import { Color, Point } from 'lively.graphics';
 
 export function merge (o, a, b) {
   let isArray, k, ov, result;
-  if (typeof o !== 'object') throw new Error('Merge original document must be an object!');
-  if (typeof a !== 'object') throw new Error('Merge current document must be an object!');
-  if (typeof b !== 'object') throw new Error('Merge new document must be an object!');
+  if (typeof o !== 'object' || o === null) throw new Error('Merge original document must be an object!');
+  if (typeof a !== 'object' || a === null) throw new Error('Merge current document must be an object!');
+  if (typeof b !== 'object' || b === null) throw new Error('Merge new document must be an object!');
 
   isArray = Array.isArray(b);
   result = isArray ? [] : {};

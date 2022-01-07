@@ -73,7 +73,7 @@ describe('lively.merger >> Merger', () => {
   });
 
   describe('#mergeMorphs', () => {
-    it('detects if non-morphs are to be diffed', () => {
+    it('detects if non-morphs are to be merged', () => {
       expect(() => {
         Merger.mergeMorphs({}, {});
       }).to.throw('Cannot merge objects that are not morphs');
