@@ -54,7 +54,7 @@ export class Merger {
     const idsOfFirstInSecond = morph1.derivationIDs.map(id => morph2.derivationIDs.indexOf(id));
 
     let index = idsOfFirstInSecond.length;
-    while (index-- && !idsOfFirstInSecond[index]);
+    while (index-- && idsOfFirstInSecond[index] < 0);
 
     return $world.submorphs.filter(morph => morph.id === idsOfFirstInSecond[index])[0] || new Morph();
   }
