@@ -1,7 +1,7 @@
 /* global describe, it, beforeEach, afterEach, before */
 import { expect } from 'mocha-es6';
 import { merge } from '../3-way-merger.js';
-import { Color } from 'lively.graphics';
+import { Color, Point } from 'lively.graphics';
 
 describe('lively.merger >> 3-way-merger', () => {
   describe('#merge', () => {
@@ -12,7 +12,7 @@ describe('lively.merger >> 3-way-merger', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
             merge(obj, {}, {});
-          }).to.throw('Merge original document must be an object!');
+          }).to.throw('Parent must be an object');
         });
       });
 
@@ -20,7 +20,7 @@ describe('lively.merger >> 3-way-merger', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
             merge({}, obj, {});
-          }).to.throw('Merge current document must be an object!');
+          }).to.throw('First child must be an object');
         });
       });
 
@@ -28,7 +28,7 @@ describe('lively.merger >> 3-way-merger', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
             merge({}, {}, obj);
-          }).to.throw('Merge new document must be an object!');
+          }).to.throw('Second child must be an object');
         });
       });
     });
@@ -37,18 +37,45 @@ describe('lively.merger >> 3-way-merger', () => {
       beforeEach(() => {
         base = {
           name: 'test',
-          color: Color.red
+          color: Color.red,
+          position: new Point(200, 100)
         };
 
         child1 = {
           name: 'hello there',
-          color: Color.red
+          color: Color.red,
+          position: new Point(200, 100)
         };
 
         child2 = {
           name: 'test',
-          color: Color.green
+          color: Color.green,
+          position: new Point(100, 100)
         };
+      });
+
+      it('handles color objects correctly', () => {
+        const result = merge(base, child1, child2);
+
+        expect(result.color).to.be.an.instanceOf(Color);
+        expect(result.color.isColor).to.be.true;
+        expect(result.color).to.equal(Color.green);
+      });
+
+      it('handles point objects correctly', () => {
+        const result = merge(base, child1, child2);
+
+        expect(result.position).to.be.an.instanceOf(Point);
+        expect(result.position.isPoint).to.be.true;
+        expect(result.position).to.equal(new Point(100, 100));
+      });
+
+      it('merges objects correctly, if there is no conflict', () => {
+        const result = merge(base, child1, child2);
+
+        expect(result.name).to.equal('hello there');
+        expect(result.color).to.equal(Color.green);
+        expect(result.position).to.equal(new Point(100, 100));
       });
     });
   });
