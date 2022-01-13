@@ -802,7 +802,13 @@ export class Morph {
         defaultValue: []
       },
 
-      metadata: { group: 'core' }
+      metadata: { group: 'core' },
+
+      derivationIds: {
+        group: 'core',
+        defaultValue: [],
+        get () { return this.getProperty('derivationIds') || []; }
+      }
     };
   }
 
@@ -823,6 +829,8 @@ export class Morph {
     this._parametrizedProps = obj.select(props, arr.intersect(Object.keys(props), [...this.styleProperties, 'master']));
     this.initializeProperties(props);
 
+    this.derivationIds.push(this._id);
+    
     if (props.bounds) {
       this.setBounds(props.bounds);
       this._parametrizedProps.extent = this.extent;
@@ -872,6 +880,8 @@ export class Morph {
     if (this.viewModel) {
       this.viewModel.attach(this);
     }
+     
+    this.derivationIds.push(this._id);
   }
 
   get __only_serialize__ () {
