@@ -2,9 +2,15 @@ import { mergeObjects } from './3-way-merger.js';
 import { Morph } from 'lively.morphic';
 
 export class Merger {
-  static propertiesFromMorph (morph) {
+  static propertiesFromMorph (morph) {    
     const properties = {};
-    Object.keys(morph.propertiesAndPropertySettings().properties).forEach(key => {
+
+    Object.filter = (obj, predicate) => 
+      Object.keys(obj)
+        .filter(key => predicate(obj[key]))
+        .reduce((res, key) => (res[key] = obj[key], res), {});
+    
+    Object.keys(Object.filter(morph.propertiesAndPropertySettings().properties, property => !property.derived)).forEach(key => {
       if (key !== ('styleProperties' || 'style')) { properties[key] = morph[key]; }
     });
     return properties;

@@ -24,6 +24,7 @@ class MergeConflict {
 let mergeConflicts = [];
 
 export function mergeObjects (o, a, b) {
+  mergeConflicts = [];
   let properties = merge(o, a, b);
   return {
     properties: properties,
