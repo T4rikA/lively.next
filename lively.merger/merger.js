@@ -10,7 +10,11 @@ export class Merger {
     return properties;
   }
 
-  static mergeMorphsWithIds (morph1id, morph2id) {
+  static mergeMorphsWithIds (
+    morph1id, 
+    morph2id, 
+    onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  ) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {
       throw new Error(`Cannot merge morphs, morph1 with id ${morph1id} not found`);
@@ -19,10 +23,17 @@ export class Merger {
     if (!morph2) {
       throw new Error(`Cannot merge morphs, morph2 with id ${morph2id} not found`);
     }
-    return this.mergeMorphs(morph1, morph2);
+    return this.mergeMorphs(
+      morph1, 
+      morph2, 
+      (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
   }
 
-  static mergeMorphs (morph1, morph2) {
+  static mergeMorphs (
+    morph1, 
+    morph2, 
+    onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  ) {
     if (!morph1.isMorph || !morph2.isMorph) {
       throw new Error('Cannot merge objects that are not morphs');
     }
@@ -42,6 +53,6 @@ export class Merger {
       propertiesMorph1,
       propertiesMorph2);
     // TODO conflict resolve
-    return new Morph(result.properties);
+    return onMergeResult(result.properties, result.mergeConflicts);
   }
 }

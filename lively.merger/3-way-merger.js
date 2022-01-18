@@ -23,12 +23,12 @@ class MergeConflict {
 
 let mergeConflicts = [];
 
-export function mergeObjects (o, a, b) {
+export function mergeObjects (
+  o, a, b, 
+  onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
+) {
   let properties = merge(o, a, b);
-  return {
-    properties: properties,
-    mergeConflicts: mergeConflicts
-  };
+  return onMergeResult(properties, mergeConflicts);
 }
 
 function resolveSpecialProperty (o, a, b, k) {
