@@ -1,6 +1,9 @@
 /* global describe, it, beforeEach, afterEach, before */
-import { expect } from 'mocha-es6';
-import { merge } from '../3-way-merger.js';
+import { expect, chai } from 'mocha-es6';
+import spies from 'https://jspm.dev/chai-spies';
+chai.use(spies);
+
+import { merge, mergeObjects } from '../3-way-merger.js';
 import { Color, Point } from 'lively.graphics';
 
 describe('lively.merger >> 3-way-merger', () => {
@@ -71,6 +74,14 @@ describe('lively.merger >> 3-way-merger', () => {
         expect(result.name).to.equal('hello there');
         expect(result.color).to.equal(Color.green);
         expect(result.position).to.equal(new Point(100, 100));
+      });
+
+      it('calls the onMergeConflic callback, if given', () => {
+        const callback = (properties, mergeConflicts) => {};
+        const method = chai.spy(callback);
+        
+        mergeObjects(base, child1, child2, callback);
+        expect(method).to.have.been.called;
       });
     });
   });

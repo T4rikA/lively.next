@@ -1,5 +1,8 @@
 /* global describe, it, beforeEach, afterEach */
-import { expect } from 'mocha-es6';
+import { expect, chai } from 'mocha-es6';
+import spies from 'https://jspm.dev/chai-spies';
+chai.use(spies);
+
 import { Merger } from '../merger.js';
 import { Morph, Ellipse } from 'lively.morphic';
 import { Color } from 'lively.graphics';
@@ -74,6 +77,14 @@ describe('lively.merger >> Merger', () => {
         Merger.mergeMorphsWithIds(morph1.id, 'morph2id');
       }).to.throw('Cannot merge morphs, morph2 with id morph2id not found');
     });
+
+    it('calls the onMergeResult callback, if given', () => {
+      const callback = (properties, mergeConflicts) => {};
+      const method = chai.spy(callback);
+      
+      Merger.mergeMorphsWithIds(morph1.id, morph2.id, callback);
+      expect(method).to.have.been.called;
+    });
   });
 
   describe('#mergeMorphs', () => {
@@ -107,6 +118,14 @@ describe('lively.merger >> Merger', () => {
 
       expect(merged.name).to.equal('name2');
       expect(merged.fill).to.equal(Color.red);
+    });
+
+    it('calls the onMergeResult callback, if given', () => {
+      const callback = (properties, mergeConflicts) => {};
+      const method = chai.spy(callback);
+      
+      Merger.mergeMorphs(morph1, morph2, callback);
+      expect(method).to.have.been.called;
     });
   });
 });
