@@ -1,4 +1,3 @@
-import { Color, Point } from 'lively.graphics';
 // soruce: https://github.com/falsecz/3-way-merge/blob/master/index.coffee
 
 /**
@@ -7,8 +6,31 @@ import { Color, Point } from 'lively.graphics';
  * @param {Object} b (new)
  * @return {Object} Merged result
 */
+let mergeConflicts;
+class MergeConflict {
+  constructor (property, a, b) {
+    this.property = property;
+    this.a = a;
+    this.b = b;
+    this.name = 'MergeException';
+    mergeConflicts.push(this); 
+  }
+  
+  toString () {
+    return this.name + this.property + this.a + this.b;
+  }
+}
 
-export function merge (o, a, b) {
+export function mergeObjects (o, a, b) {
+  mergeConflicts = [];
+  let properties = merge(o, a, b);
+  return {
+    properties: properties,
+    mergeConflicts: mergeConflicts
+  };
+}
+
+function merge (o, a, b) {
   let isArray, k, ov, result;
   if (typeof o !== 'object' || o === null) throw new Error('Parent must be an object');
   if (typeof a !== 'object' || a === null) throw new Error('First child must be an object');
@@ -44,19 +66,15 @@ export function merge (o, a, b) {
         result[k] = a[k];
       } else if (a[k] !== result[k]) {
         if (a[k].isColor && result[k].isColor) {
-          const merge_result = merge(
-            JSON.parse(JSON.stringify(o[k])),
-            JSON.parse(JSON.stringify(a[k])),
-            JSON.parse(JSON.stringify(b[k]))
-          );
-          result[k] = Color.fromTuple(Object.values(merge_result));
+          if (!o[k].equals(a[k]) && !o[k].equals(b[k]) && !a[k].equals(b[k])) {
+            new MergeConflict(k, a[k], b[k]);
+            result[k] = o[k]; // TODO: should be changed later when merge conflicts can be resolved
+          } else { result[k] = a[k].equals(o[k]) ? b[k] : a[k]; }
         } else if (a[k].isPoint && result[k].isPoint) {
-          const merge_result = merge(
-            JSON.parse(JSON.stringify(o[k])),
-            JSON.parse(JSON.stringify(a[k])),
-            JSON.parse(JSON.stringify(b[k]))
-          );
-          result[k] = Point.fromTuple(Object.values(merge_result));
+          if (!o[k].equals(a[k]) && !o[k].equals(b[k]) && !a[k].equals(b[k])) {
+            new MergeConflict(k, a[k], b[k]);
+            result[k] = o[k]; // TODO: should be changed later when merge conflicts can be resolved
+          } else { result[k] = a[k].equals(o[k]) ? b[k] : a[k]; }
         } else if (typeof a[k] === 'object' && typeof (b ? b[k] : undefined) === 'object') {
           ov = !!o && k in o && typeof o[k] === 'object' ? o[k] : {};
           result[k] = merge(ov, a[k], b[k]);
