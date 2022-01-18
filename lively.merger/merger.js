@@ -51,11 +51,19 @@ export class Merger {
   }
 
   static getLowestCommonAncestor (morph1, morph2) {
-    const idsOfFirstInSecond = morph1.derivationIDs.map(id => morph2.derivationIDs.indexOf(id));
+    for (let index = morph1.derivationIDs.length - 1; index > 0; index--) {
+      const currentId = morph1.derivationIDs[index];
 
-    let index = idsOfFirstInSecond.length;
-    while (index-- && idsOfFirstInSecond[index] < 0);
-
-    return $world.submorphs.filter(morph => morph.id === idsOfFirstInSecond[index])[0] || new Morph();
+      if (morph2.derivationIDs.includes(currentId)) {
+        const parentMorph = $world.submorphs.filter(morph => morph.id === currentId)[0]
+        if (parentMorph) {
+          return parentMorph
+        } else {
+          // TODO: go to morphicDB to get the last saved snapshot
+        }
+      }
+    }
+    
+    return new Morph();    
   }
 }
