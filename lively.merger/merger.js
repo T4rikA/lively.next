@@ -3,16 +3,24 @@ import { merge } from './3-way-merger.js';
 import { Morph } from 'lively.morphic';
 
 export class Merger {
+  static propertiesFromMorph (morph) {
+    const properties = {};
+    Object.keys(morph.propertiesAndPropertySettings().properties).forEach(key => {
+      if (key !== 'styleProperties') { properties[key] = morph[key]; }
+    });
+    return properties;
+  }
+
   static mergeMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {
-      $world.setStatusMessage('Cant diff morphs, morph1 not found');
+      throw new Error(`Cannot merge morphs, morph1 with id ${morph1id} not found`);
       return;
     }
 
     const morph2 = $world.submorphs.filter(morph => morph.id === morph2id)[0];
     if (!morph2) {
-      $world.setStatusMessage('Cant diff morphs, morph2 not found');
+      throw new Error(`Cannot merge morphs, morph2 with id ${morph2id} not found`);
       return;
     }
 
@@ -20,24 +28,22 @@ export class Merger {
   }
 
   static mergeMorphs (morph1, morph2) {
-    if (JSON.stringify(morph1.styleClasses) != JSON.stringify(morph2.styleClasses)) {
-      throw new Error(`Classes differ, can't merge morphs: ${JSON.stringify(morph1.styleClasses)}, ${JSON.stringify(morph2.syleClasses)}`);
+    if (!this.isMorph(morph1) || !this.isMorph(morph2)) {
+      throw new Error('Cannot merge objects that are not morphs');
     }
 
-    let testMorph = new Morph();
-    let propertiesMorph1 = {};
-    let propertiesMorph2 = {};
-    let propertiesTestMorph = {};
-    Object.keys(morph1.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph1[key] = morph1[key]; }
-    });
-    Object.keys(morph2.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph2[key] = morph2[key]; }
-    });
-    Object.keys(testMorph.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesTestMorph[key] = testMorph[key]; }
-    });
-    let properties = merge(propertiesTestMorph,
+    if (JSON.stringify(morph1.styleClasses) != JSON.stringify(morph2.styleClasses)) {
+      throw new Error('Cannot merge morphs, styleclasses differ');
+    }
+
+    let baseMorph = new Morph();
+    let propertiesBaseMorph = this.propertiesFromMorph(baseMorph);
+
+    let propertiesMorph1 = this.propertiesFromMorph(morph1);
+    let propertiesMorph2 = this.propertiesFromMorph(morph2);
+
+    let properties = merge(
+      propertiesBaseMorph,
       propertiesMorph1,
       propertiesMorph2);
     return new Morph(properties);
