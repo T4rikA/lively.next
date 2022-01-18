@@ -37,22 +37,38 @@ export class Merger {
     if (!morph1.isMorph || !morph2.isMorph) {
       throw new Error('Cannot merge objects that are not morphs');
     }
-
     if (JSON.stringify(morph1.styleClasses) !== JSON.stringify(morph2.styleClasses)) {
       throw new Error('Cannot merge morphs, styleclasses differ');
     }
 
-    let baseMorph = new Morph();
-    let propertiesBaseMorph = this.propertiesFromMorph(baseMorph);
+    let parentMorph = this.getLowestCommonAncestor(morph1, morph2);
 
     let propertiesMorph1 = this.propertiesFromMorph(morph1);
     let propertiesMorph2 = this.propertiesFromMorph(morph2);
+    let propertiesParentMorph = this.propertiesFromMorph(parentMorph);
 
     let result = mergeObjects(
-      propertiesBaseMorph,
+      propertiesParentMorph,
       propertiesMorph1,
       propertiesMorph2);
     // TODO conflict resolve
     return onMergeResult(result.properties, result.mergeConflicts);
+  }
+
+  static getLowestCommonAncestor (morph1, morph2) {
+    for (let index = morph1.derivationIds.length - 1; index >= 0; index--) {
+      const currentId = morph1.derivationIds[index];
+
+      if (morph2.derivationIds.includes(currentId)) {
+        const parentMorph = $world.submorphs.filter(morph => morph.id === currentId)[0];
+        if (parentMorph) {
+          return parentMorph;
+        } else {
+          // TODO: go to morphicDB to get the last saved snapshot
+        }
+      }
+    }
+    
+    return new Morph();    
   }
 }
