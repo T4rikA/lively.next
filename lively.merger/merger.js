@@ -26,12 +26,15 @@ export class Merger {
     if (!morph1.isMorph || !morph2.isMorph) {
       throw new Error('Cannot merge objects that are not morphs');
     }
+    if (JSON.stringify(morph1.styleClasses) !== JSON.stringify(morph2.styleClasses)) {
+      throw new Error('Cannot merge morphs, styleclasses differ');
+    }
 
     let parentMorph = this.getLowestCommonAncestor(morph1, morph2);
 
-    let propertiesMorph1 = {};
-    let propertiesMorph2 = {};
-    let propertiesParentMorph = {};
+    let propertiesMorph1 = this.propertiesFromMorph(morph1);
+    let propertiesMorph2 = this.propertiesFromMorph(morph2);
+    let propertiesParentMorph = this.propertiesFromMorph(parentMorph);
 
     let result = mergeObjects(
       propertiesParentMorph,
