@@ -41,7 +41,7 @@ export class Merger {
       propertiesBaseMorph,
       propertiesMorph1,
       propertiesMorph2);
-    console.log(result.mergeConflicts); // TODO conflict resolve
+    // TODO conflict resolve
     return new Morph(result.properties);
   }
 }

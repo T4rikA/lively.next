@@ -6,7 +6,7 @@
  * @param {Object} b (new)
  * @return {Object} Merged result
 */
-let mergeConflicts;
+
 class MergeConflict {
   constructor (property, a, b) {
     this.property = property;
@@ -21,13 +21,21 @@ class MergeConflict {
   }
 }
 
+let mergeConflicts = [];
+
 export function mergeObjects (o, a, b) {
-  mergeConflicts = [];
   let properties = merge(o, a, b);
   return {
     properties: properties,
     mergeConflicts: mergeConflicts
   };
+}
+
+function resolveSpecialProperty (o, a, b, k) {
+  if (!o.equals(a) && !o.equals(b) && !a.equals(b)) {
+    new MergeConflict(k, a, b);
+    return o; // TODO: should be changed later when merge conflicts can be resolved
+  } else { return a.equals(o) ? b : a; }
 }
 
 function merge (o, a, b) {
@@ -66,15 +74,9 @@ function merge (o, a, b) {
         result[k] = a[k];
       } else if (a[k] !== result[k]) {
         if (a[k].isColor && result[k].isColor) {
-          if (!o[k].equals(a[k]) && !o[k].equals(b[k]) && !a[k].equals(b[k])) {
-            new MergeConflict(k, a[k], b[k]);
-            result[k] = o[k]; // TODO: should be changed later when merge conflicts can be resolved
-          } else { result[k] = a[k].equals(o[k]) ? b[k] : a[k]; }
+          result[k] = resolveSpecialProperty(o[k], a[k], b[k], k);
         } else if (a[k].isPoint && result[k].isPoint) {
-          if (!o[k].equals(a[k]) && !o[k].equals(b[k]) && !a[k].equals(b[k])) {
-            new MergeConflict(k, a[k], b[k]);
-            result[k] = o[k]; // TODO: should be changed later when merge conflicts can be resolved
-          } else { result[k] = a[k].equals(o[k]) ? b[k] : a[k]; }
+          result[k] = resolveSpecialProperty(o[k], a[k], b[k], k);
         } else if (typeof a[k] === 'object' && typeof (b ? b[k] : undefined) === 'object') {
           ov = !!o && k in o && typeof o[k] === 'object' ? o[k] : {};
           result[k] = merge(ov, a[k], b[k]);
