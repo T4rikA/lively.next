@@ -11,10 +11,6 @@ export class Merger {
     return properties;
   }
 
-  static isMorph (obj) {
-    return obj.styleClasses && obj.styleClasses.includes('morph');
-  }
-
   static mergeMorphsWithIds (morph1id, morph2id) {
     const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
     if (!morph1) {

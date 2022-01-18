@@ -32,6 +32,7 @@ describe('lively.merger >> 3-way-merger', () => {
         });
       });
     });
+
     describe('merging', () => {
       let base, child1, child2;
       beforeEach(() => {
@@ -56,17 +57,11 @@ describe('lively.merger >> 3-way-merger', () => {
 
       it('handles color objects correctly', () => {
         const result = merge(base, child1, child2);
-
-        expect(result.color).to.be.an.instanceOf(Color);
-        expect(result.color.isColor).to.be.true;
         expect(result.color).to.equal(Color.green);
       });
 
       it('handles point objects correctly', () => {
         const result = merge(base, child1, child2);
-
-        expect(result.position).to.be.an.instanceOf(Point);
-        expect(result.position.isPoint).to.be.true;
         expect(result.position).to.equal(new Point(100, 100));
       });
 

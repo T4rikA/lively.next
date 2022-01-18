@@ -34,30 +34,6 @@ describe('lively.merger >> Merger', () => {
     });
   });
 
-  describe('#isMorph', () => {
-    it('returns true on morphs', () => {
-      expect(Merger.isMorph(morph1)).to.be.true;
-    });
-
-    it('returns true on morph subclasses', () => {
-      class tmp extends Morph {}
-      expect(Merger.isMorph(new tmp())).to.be.true;
-    });
-
-    it('returns false on javascript dictionaries', () => {
-      expect(Merger.isMorph({})).to.be.falsey;
-    });
-
-    it('returns false on javascript arrays', () => {
-      expect(Merger.isMorph([])).to.be.falsey;
-    });
-
-    it('returns false on custom objects that are not morph subclasses', () => {
-      class tmp {}
-      expect(Merger.isMorph(new tmp())).to.be.falsey;
-    });
-  });
-
   describe('#mergeMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
