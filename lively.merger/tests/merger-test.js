@@ -5,18 +5,46 @@ import { Morph, Ellipse } from 'lively.morphic';
 import { Color } from 'lively.graphics';
 
 describe('lively.merger >> Merger', () => {
-  let morph1, morph2;
+  let parent, morph1, morph2;
   beforeEach(() => {
-    morph1 = new Morph();
-    morph2 = new Morph();
+    parent = new Morph();
+    morph1 = parent.copy();
+    morph2 = parent.copy();
 
+    parent.openInWorld();
     morph1.openInWorld();
     morph2.openInWorld();
   });
 
   afterEach(() => {
+    parent.abandon();
     morph1.abandon();
     morph2.abandon();
+  });
+
+  describe('#getLowestCommonAncestor', () => {
+    it('detects the correct parent when it is in the world', () => {
+      const result = Merger.getLowestCommonAncestor(morph1, morph2);
+
+      expect(result.id).to.equal(parent.id);
+    });
+
+    /*
+    // this is currently not implemented, as we decided to do this later
+    // because we didn't want to mess with MorphicDB right now
+    it('detects the correct parent when it is not in the world', () => {
+      
+      parent.remove();
+      const result = Merger.getLowestCommonAncestor(morph1, morph2);
+
+      expect(result.id).to.equal(parent.id);
+    });
+    */
+
+    it('returns an empty morph if there is no parent', () => {
+      const result = Merger.getLowestCommonAncestor(new Morph(), new Morph());
+      expect(result.propertiesAndPropertySettings().properties).to.equal((new Morph()).propertiesAndPropertySettings().properties);
+    });
   });
 
   describe('#propertiesFromMorph', () => {
