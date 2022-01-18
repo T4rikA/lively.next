@@ -1,0 +1,37 @@
+name: Build and Deploy Docs
+
+on:
+  workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Setup node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16.13.1'
+    - name: Install jsdocs
+      run: npm install -g jsdoc
+    - name: Install jsodc theme
+      run: npm install clean-jsdoc-theme
+    - name: Build docs
+      run: jsdoc -c conf.json -R README.md
+    - name: Configure git for lively-docs-bot
+      run: |
+        git config user.name lively-docs-bot
+        git config user.email lively-docs-bot@lively-next.org
+    # Since we only checkout the latest commit from the current branch,
+    # a local docs-latest branch will never exist.
+    # Force pushing the newly created branch will thus always keep the docs-latest
+    # branch on remote one commit ahead of the current branch.
+    # See the documentation of checkout@v2 for more info.
+    - name: Commit docs build onto docs-latest branch
+      run: |
+        git checkout -b docs-latest
+        git add docs/*
+        git commit -m "Latest docs based on $(git rev-parse --short HEAD)"
+        git push --set-upstream origin docs-latest --force
+      

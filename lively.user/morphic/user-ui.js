@@ -1,5 +1,5 @@
 /* global System */
-import { promise, fun, arr, string } from 'lively.lang';
+import { promise, arr, string } from 'lively.lang';
 import { resource } from 'lively.resources';
 import { pt, Rectangle, Color } from 'lively.graphics';
 import { connect, once, signal } from 'lively.bindings';
@@ -8,16 +8,16 @@ import { Menu } from 'lively.components';
 import { loadMorphFromSnapshot, createMorphSnapshot } from 'lively.morphic/serialization.js';
 import UserRegistry from 'lively.user/client/user-registry.js';
 import { ClientUser } from 'lively.user/index.js';
-import { loadPart } from 'lively.morphic/partsbin.js';
-import LoadingIndicator from 'lively.components/loading-indicator.js';
 
 // das kostet was??? 99 euro ey.
 // import * as AppleID from "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
 import { gapi } from 'https://apis.google.com/js/platform.js';
 import { pathForBrowserHistory } from 'lively.morphic/helpers.js';
-import ObjectPackage, { interactivelyForkPackage, addScript } from 'lively.classes/object-classes.js';
+import ObjectPackage from 'lively.classes/object-classes.js';
 import { part } from 'lively.morphic/components/core.js';
 import { TopBar } from 'lively.ide/studio/top-bar.cp.js';
+import { Flap } from 'lively.ide/studio/sidebar-flap.cp.js';
+import { LivelyVersionChecker } from 'lively.ide/studio/version-checker.cp.js';
 
 // adoptObject(that, UserInfoWidget)
 // adoptObject(that, LoginWidget)
@@ -108,13 +108,13 @@ export var UserUI = {
           duration: 500
         });
       }
-      topBar.viewModel.openSideBar('Scene Graph');
-      topBar.viewModel.openSideBar('Styling Palette');
-      const versionChecker = await resource('part://SystemUserUI/version checker').read();
+      const versionChecker = part(LivelyVersionChecker);
       versionChecker.name = 'lively version checker';
       versionChecker.openInWorld();
       versionChecker.relayout();
       versionChecker.checkVersion();
+      part(Flap, { viewModel: { target: 'scene graph' } }).openInWorld();
+      part(Flap, { viewModel: { target: 'properties panel' } }).openInWorld();
     })();
     return topBar;
   },
@@ -690,9 +690,7 @@ export class UserFlap extends Morph {
       grabbable: { defaultValue: false },
       acceptsDrops: { defaultValue: false },
       fill: { defaultValue: Color.white },
-      borderRadiusBottom: { defaultValue: 10 },
-      borderRadiusLeft: { defaultValue: 10 },
-      borderRadiusRight: { defaultValue: 10 },
+      borderRadius: { defaultValue: 10 },
       nativeCursor: { defaultValue: 'pointer' },
       respondsToVisibleWindow: { defaultValue: true },
       haloColor: {

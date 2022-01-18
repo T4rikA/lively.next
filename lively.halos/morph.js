@@ -15,7 +15,6 @@ import { obj, string, Path as PropertyPath, promise, properties, num, arr } from
 import { connect, signal, disconnect, disconnectAll, once } from 'lively.bindings';
 
 import { showAndSnapToGuides, showAndSnapToResizeGuides, removeSnapToGuidesOf } from './drag-guides.js';
-import { CommentBrowser } from 'lively.collab';
 
 import { show } from './markers.js';
 import { part } from 'lively.morphic/components/core.js';
@@ -879,7 +878,8 @@ class NameHolder extends Morph {
     if (!this.forceUniqueName || this.validName) {
       this.target.name = newName;
       signal(this, 'active', [false, this]);
-      if (CommentBrowser.instance) CommentBrowser.updateName(this.target);
+      const commentBrowser = $world.getSubmorphNamed('Comment Browser');
+      if (commentBrowser) commentBrowser.viewModel.updateName(this.target);
     }
   }
 }
@@ -924,7 +924,7 @@ class NameHaloItem extends HaloItem {
     if (!target || target.isMorphSelection) return;
     if (target.master) {
       const appliedMaster = target.master.determineMaster(target);
-      const isLocal = appliedMaster && !!target.world().localComponents.includes(appliedMaster);
+      const isLocal = appliedMaster && !!$world.localComponents.includes(appliedMaster);
       const linkToWorld = appliedMaster ? target.master.getWorldUrlFor(appliedMaster) : 'this project';
       const masterLink = this.addMorph(Icon.makeLabel(linkToWorld ? 'external-link-alt' : 'exclamation-triangle', {
         nativeCursor: 'pointer',
@@ -1238,7 +1238,7 @@ class InspectHaloItem extends HaloItem {
 
   onMouseDown (evt) {
     (async () => {
-      const { SystemInspector } = await System.import('lively.ide/js/inspector/ui.cp.js');
+      const Inspector = await System.import('lively.ide/js/inspector/ui.cp.js');
       const existing = this.world().getSubmorphsByStyleClassName('Inspector')
         .find(i => i.targetObject == this.halo.target);
       let win;
@@ -1247,7 +1247,7 @@ class InspectHaloItem extends HaloItem {
         win.activate();
         win.animate({ center: this.world().visibleBounds().center(), duration: 200 });
       } else {
-        part(SystemInspector, { viewModel: { targetObject: this.halo.target } }).openInWindow();
+        Inspector.openInWindow({ targetObject: this.halo.target });
       }
       this.halo.remove();
     })();

@@ -249,7 +249,7 @@ export default class ObjectEditorContext {
   }
 
   async selectClass (className) {
-    // what if classes names are the same, but located in different modules?
+    // fixme: what if classes names are the same, but located in different modules?
     this.selectedClassName = await this.withContextDo(() => {
       const klass = this.classChainOfTarget().find(ea => ea[Symbol.for('__LivelyClassName__')] === className);
       this.selectedMethod = null;
@@ -301,9 +301,9 @@ export default class ObjectEditorContext {
 
   async removeUnusedImports (toRemove) {
     try {
-      var m = this.selectedModule;
-      var origSource = await m.source();
-      var toRemove = await chooseUnusedImports(origSource);
+      let m = this.selectedModule;
+      let origSource = await m.source();
+      let toRemove = await chooseUnusedImports(origSource);
 
       if (!toRemove || !toRemove.changes || !toRemove.changes.length) {
         return { statusMessage: 'Nothing to remove' };

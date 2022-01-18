@@ -1,5 +1,5 @@
 import { morph, addOrChangeCSSDeclaration } from 'lively.morphic';
-import { string, arr, obj } from 'lively.lang';
+import { string, properties, arr, obj } from 'lively.lang';
 import { getClassName } from 'lively.serializer2';
 import { connect } from 'lively.bindings';
 import { deserializeMorph, serializeMorph } from '../serialization.js';
@@ -8,7 +8,7 @@ import { sanitizeFont } from '../helpers.js';
 // varargs, viewModelProps can be skipped
 export function part (masterComponent, overriddenProps = {}, oldParam) {
   if (oldParam) overriddenProps = oldParam;
-  const p = masterComponent._snap ? deserializeMorph(masterComponent._snap, { reinitializeIds: true }) : masterComponent.copy();
+  const p = masterComponent._snap ? deserializeMorph(masterComponent._snap, { reinitializeIds: true, migrations: [] }) : masterComponent.copy();
   // instead of that deserialize the snapshot without the master itself
   p.isComponent = false;
   // ensure master is initialized before overriding
@@ -213,6 +213,10 @@ export class ViewModel {
     return this.view.world();
   }
 
+  execCommand (cmdName, opts) {
+    return this.view.execCommand(cmdName, opts);
+  }
+
   doWithScope (cb) {
     return this.view && this.view.withAllSubmorphsDoExcluding(cb, (m) => m.ignoreScope || (m.viewModel && m.viewModel != this));
   }
@@ -262,14 +266,19 @@ export class ViewModel {
   }
 
   reifyBindings () {
-    for (let { target, model, signal, handler, override = false } of this.bindings) {
+    for (let {
+      target, model, signal, handler,
+      override = false, converter = false, updater = false
+    } of this.bindings) {
       try {
         if (model) target = this.view.getSubmorphNamed(model).viewModel;
         if (!target) target = this.view;
         if (typeof target === 'string') { target = this.view.getSubmorphNamed(target); }
         if (!target) continue;
         connect(target, signal, this, handler, {
-          override
+          override,
+          converter,
+          updater
         });
       } catch (err) {
         console.warn('Failed to reify biniding: ', target, model, signal, handler);
@@ -284,9 +293,11 @@ export class ViewModel {
   }
 
   reifyExposedProps () {
-    const { properties } = this.propertiesAndPropertySettings();
+    const { properties: props } = this.propertiesAndPropertySettings();
+    const descriptors = properties.allPropertyDescriptors(this);
     for (let prop of this.expose || []) {
-      if (properties[prop]) {
+      const descr = descriptors[prop];
+      if (props[prop] || descr && (!!descr.get || !!descr.set)) {
         // install getter setter
         Object.defineProperty(this.view, prop, {
           configurable: true,
@@ -297,6 +308,8 @@ export class ViewModel {
         });
         continue;
       }
+      // this is not working when the prop defines a custom setter
+      // we need to instead define a custom getter here
       this.view[prop] = (...args) => {
         return this[prop](...args);
       };
@@ -333,6 +346,7 @@ export class ViewModel {
     this.reifyExposedProps();
     view.toString = () => `<${getClassName(view)}[${getClassName(this)}]>`;
     this.onRefresh();
+    this.viewDidLoad();
   }
 }
 

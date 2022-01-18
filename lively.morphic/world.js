@@ -48,22 +48,9 @@ export class World extends Morph {
           if (typeof showsUserFlap !== 'undefined') bool = showsUserFlap;
           this.setProperty('showsUserFlap', bool);
           System.import('lively.user/morphic/user-ui.js')
-            .then(userUI => {
-              if (userUI.UserUI[bool ? 'showUserFlap' : 'hideUserFlap'](this)) { this.enableComments = true; }
-            });
+          .then(userUI => userUI.UserUI[bool ? 'showUserFlap' : 'hideUserFlap'](this));
         }
       },
-
-      enableComments: {
-        defaultValue: true,
-        set (bool) {
-          this.setProperty('enableComments', bool);
-          if (bool) {
-            System.import('lively.collab').then(({ CommentBrowser }) =>
-              CommentBrowser.initializeCommentBrowser());
-          }
-        }
-      }
     };
   }
 
@@ -332,8 +319,15 @@ export class World extends Morph {
 
   visibleBounds () {
     // the bounds call seems to slow down halos...
-    if (!this.env.renderer) return this.innerBounds();
-    return this.windowBounds().intersection(this.innerBounds());
+    let visibleBounds;
+    if (!this.env.renderer) visibleBounds = this.innerBounds();
+    else visibleBounds = this.windowBounds().intersection(this.innerBounds());
+    // if not the whole world is visible, we have to adjust for scrollbars on Win and Linux (on Mac they are transparent)
+    if (bowser.mac) return visibleBounds;
+    // it does not matter in which direction the space is too small, since we always get both scroll bars
+    if (visibleBounds.height < this.extent.y || visibleBounds.width < this.extent.x) visibleBounds.width = visibleBounds.width - this.scrollbarOffset.x;
+
+    return visibleBounds;
   }
 
   visibleBoundsExcludingTopBar () {

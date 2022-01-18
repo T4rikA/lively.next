@@ -308,5 +308,54 @@ For now only a simple default theme...
       });
       return idAndSnapshot;
     }
+  },
+
+  {
+    date: '2022-01-10',
+    name: 'change semantic of borderRadius property to allow definiton on per-corner basis',
+    snapshotConverter: idAndSnapshot => {
+      const { id: rootId, snapshot } = idAndSnapshot;
+      Object.values(snapshot).map(m => {
+        // do not migrate if borderRadius is already migrated
+        if (m.props.borderRadius && typeof m.props.borderRadius.value === 'object' && !m.props.borderRadius.value.hasOwnProperty('topLeft')) {
+          const borderRadius = m.props.borderRadius.value;
+          let newRadius;
+          if (borderRadius.left == borderRadius.right == borderRadius.bottom == borderRadius.top) newRadius = borderRadius.left;
+          else newRadius = Math.max(borderRadius.left, borderRadius.right, borderRadius.bottom, borderRadius.top);
+          m.props.borderRadius.value = {
+            topLeft: newRadius,
+            topRight: newRadius,
+            bottomRight: newRadius,
+            bottomLeft: newRadius
+          };
+        }
+      });
+      return idAndSnapshot;
+    }
+  },
+  
+  {
+    date: '2022-01-14',
+    name: 'migrate comments browser to new components architecture and rebuild rather than save the instances',
+    snapshotConverter: idAndSnapshot => {
+      const { id: rootId, snapshot } = idAndSnapshot;
+      const referencesToRemove = [];
+      const connections = [];
+      Object.keys(snapshot).map(k => {
+        const currentObj = snapshot[k];
+        if (currentObj.props.commentBrowser) delete snapshot[k].props.commentBrowser;
+        if (currentObj['lively.serializer-class-info']) {
+          if (currentObj['lively.serializer-class-info'].className === 'CommentBrowser') referencesToRemove.push(k);
+          if (currentObj['lively.serializer-class-info'].className === 'AttributeConnection') connections.push(k);
+        }
+      });
+      connections.forEach((c) => {
+        if (snapshot[c].props.targetObj.value.id in referencesToRemove) delete snapshot[c];
+      });
+      referencesToRemove.forEach(k => delete snapshot[k]);
+      
+      removeUnreachableObjects([rootId], snapshot);
+      return idAndSnapshot;
+    }
   }
 ];

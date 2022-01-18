@@ -1,6 +1,6 @@
 /* global System,fetch */
 import { resource, registerExtension as registerResourceExension } from 'lively.resources';
-import { Color } from 'lively.graphics';
+
 import { Path, obj, date, promise } from 'lively.lang';
 
 import { MorphicEnv } from './env.js';
@@ -15,6 +15,7 @@ import ShellClientResource from 'lively.shell/client-resource.js';
 import './partsbin.js';
 import { joinPath } from 'lively.lang/string.js';
 import { reset } from './components/policy.js';
+import { part } from './components/core.js';
 
 export async function loadWorldFromURL (url, oldWorld, options) {
   const worldResource = url.isResource
@@ -67,11 +68,9 @@ export async function loadWorld (newWorld, oldWorld, options = {}) {
     l2l = true,
     shell = true,
     worldLoadDialog = false,
-    initializeGlobalStyleSheets = true,
     showUserFlap = typeof newWorld.showsUserFlap === 'undefined'
       ? true
-      : newWorld.showsUserFlap,
-    enableComments = true
+      : newWorld.showsUserFlap
   } = options;
 
   env = env || (oldWorld ? oldWorld.env : MorphicEnv.default());
@@ -194,6 +193,7 @@ async function setupLively2Lively (world) {
 export async function interactivelySaveWorld (world, options) {
   options = { showSaveDialog: true, useExpectedCommit: true, errorOnMissingExpectedCommit: false, confirmOverwrite: true, ...options };
 
+  const { SaveWorldDialog }= await System.import('lively.ide/studio/dialogs.cp.js');
   let name = world.name; let tags = []; let description = '';
   const oldCommit = await ensureCommitInfo(Path('metadata.commit').get(world));
   let db = options.morphicdb || MorphicDB.default;
@@ -201,7 +201,9 @@ export async function interactivelySaveWorld (world, options) {
   let mode = 'db';
 
   if (options.showSaveDialog) {
-    const dialog = await resource('part://SystemDialogs/save world dialog').read();
+    const dialog = part(SaveWorldDialog, {
+      viewModel: oldCommit || {}
+    });
     const { commit, db: dialogDB, mode: storageMode, filePath } = await world.openPrompt(dialog, { targetWorld: world });
     if (dialogDB) db = dialogDB;
     mode = storageMode;
@@ -215,7 +217,7 @@ export async function interactivelySaveWorld (world, options) {
   const i = $world.execCommand('open loading indicator', `saving ${name}...`);
   await promise.delay(80);
 
-  if (mode == 'json') {
+  if (mode === 'json') {
     const resourceHandle = resource(System.baseURL).join(jsonStoragePath).withRelativePartsResolved();
 
     if (await resourceHandle.exists()) {

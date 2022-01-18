@@ -22,7 +22,7 @@ astq.adapter('mozast');
 const DEFAULT_SKIPPED_ATTRIBUTES = ['metadata', 'styleClasses', 'isComponent', 'viewModel', 'activeMark'];
 const COMPONENTS_CORE_MODULE = 'lively.morphic/components/core.js';
 
-// convertToSpec(this.get('header buttons'), { exposeMasterRefs: false, skipAttributes: [...DEFAULT_SKIPPED_ATTRIBUTES] }).__expr__
+// convertToSpec(this.get('master component browser'), { exposeMasterRefs: false, skipAttributes: [...DEFAULT_SKIPPED_ATTRIBUTES] }).__expr__
 
 function convertToSpec (aMorph, opts = {}) {
   const { __expr__: expr, bindings } = serializeSpec(aMorph, {
@@ -189,7 +189,7 @@ function getValueExpr (prop, value) {
     const n = {};
     value = serializeNestedProp(prop, value, {
       exprSerializer, nestedExpressions: n, asExpression: true
-    });
+    }, prop == 'borderRadius' ? ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'] : ['top', 'left', 'right', 'bottom']);
   }
   valueAsExpr = {
     __expr__: JSON.stringify(value),
@@ -313,17 +313,16 @@ export class ComponentChangeTracker {
   get sourceEditor () {
     // find the first system browser that has no unsaved changes
     // and displays the current module
-    const openBrowsers = $world.getSubmorphsByStyleClassName('Browser').filter(browser =>
-      browser.selectedModule && browser.selectedModule.url.replace(System.baseURL, '') == this.componentModuleId);
+    const openBrowsers = $world.withAllSubmorphsSelect(browser =>
+      browser.isBrowser && browser.selectedModule && browser.selectedModule.url.replace(System.baseURL, '') == this.componentModuleId);
     const qualifiedBrowser = openBrowsers.find(openBrowser => {
-      if (openBrowser.hasUnsavedChanges() &&
-          this.currentModuleSource &&
-          openBrowser.ui.sourceEditor.textString != this.currentModuleSource) {
+      if (this.currentModuleSource && openBrowser.hasUnsavedChanges(this.currentModuleSource)) {
         return false;
       }
       return true;
     });
-    if (qualifiedBrowser) return qualifiedBrowser.ui.sourceEditor;
+    // fixem: expose this properly
+    if (qualifiedBrowser) return qualifiedBrowser.viewModel.ui.sourceEditor;
   }
 
   get currentModuleSource () {
@@ -521,6 +520,11 @@ export class ComponentChangeTracker {
     if (['addMorphAt', 'removeMorph'].includes(change.selector) &&
         change.args.some(m => m.epiMorph)) return true;
     if (change.selector != 'addMorphAt' && change.meta && (change.meta.metaInteraction || change.meta.isLayoutAction)) return true;
+    const { changeManager } = change.target.env;
+    // fixme: maybe ignoring grouped changes alltogether can cause issues with reconciliation...
+    if (change.selector != 'addMorphAt' && changeManager.changeGroupStack.length > 0) {
+      return true;
+    }
     if (!change.selector && obj.equals(change.prevValue, change.value)) return true;
     return false;
   }
@@ -551,7 +555,10 @@ export class ComponentChangeTracker {
       requiredBindings.push(...Object.entries(valueAsExpr.bindings));
       let responsibleComponent = getComponentScopeFor(parsedComponent, change.target);
       const morphDef = getPropertiesNode(responsibleComponent, change.target.name);
-      if (change.prop == 'layout') this.needsLinting = true;
+      if (change.prop == 'layout') {
+        debugger;
+        this.needsLinting = true;
+      }
       if (!morphDef) {
         // the entire morph does not exist and needs to be added to the definition!
         updatedSource = this.uncollapseSubmorphHierarchy(
@@ -681,14 +688,14 @@ export class ComponentChangeTracker {
     // so the successive updates are still based on the proper source
     if (this.needsLinting) {
       this.needsLinting = false;
-      updatedSource = lint(updatedSource);
+      [updatedSource] = lint(updatedSource);
       if (sourceEditor) sourceEditor.textString = updatedSource;
     }
     if (sourceEditor) {
       const browser = sourceEditor.owner;
       if (browser) {
-        browser.state.sourceHash = string.hashCode(updatedSource);
-        browser.indicateNoUnsavedChanges();
+        browser.viewModel.state.sourceHash = string.hashCode(updatedSource);
+        browser.viewModel.indicateNoUnsavedChanges();
       }
     }
     mod.setSource(updatedSource);

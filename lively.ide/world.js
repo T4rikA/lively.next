@@ -1,4 +1,4 @@
-/* global System,WeakMap,FormData,fetch,DOMParser,XMLHttpRequest */
+/* global System,FormData,DOMParser */
 import { resource } from 'lively.resources';
 import { Rectangle, Color, pt } from 'lively.graphics';
 import { arr, fun, obj, promise, Path as PropertyPath } from 'lively.lang';
@@ -9,7 +9,6 @@ import {
   easings,
   HTMLMorph,
   Text,
-  morph,
   touchInputDevice,
   Icon,
   Morph,
@@ -26,18 +25,9 @@ import { loadMorphFromSnapshot } from 'lively.morphic/serialization.js';
 import { loadObjectFromPartsbinFolder, loadPart } from 'lively.morphic/partsbin.js';
 import { uploadFile } from 'lively.morphic/events/html-drop-handler.js';
 
-import {
-  InformPrompt,
-  ConfirmPrompt,
-  MultipleChoicePrompt,
-  TextPrompt,
-  EditPrompt,
-  PasswordPrompt,
-  ListPrompt,
-  EditListPrompt
-} from 'lively.components/prompts.js';
+import { prompts } from 'lively.components';
 
-import LoadingIndicator from 'lively.components/loading-indicator.js';
+import * as LoadingIndicator from 'lively.components/loading-indicator.cp.js';
 import { Halo, MorphHighlighter, StatusMessage, StatusMessageForMorph, ProportionalLayoutHalo, GridLayoutHalo, FlexLayoutHalo } from 'lively.halos';
 import { Window, Menu } from 'lively.components';
 
@@ -95,8 +85,7 @@ export class LivelyWorld extends World {
       draggable: {
         readOnly: true,
         get () { return !touchInputDevice; }
-      },
-      commentBrowser: {}
+      }
     };
   }
 
@@ -146,7 +135,7 @@ export class LivelyWorld extends World {
 
   onKeyDown (evt) {
     super.onKeyDown(evt);
-    if (evt.targetMorph != this) return;
+    if (evt.targetMorph !== this) return;
     this.withTopBarDo(tb => tb.onKeyDown(evt));
   }
 
@@ -155,7 +144,7 @@ export class LivelyWorld extends World {
     const target = evt.state.clickedOnMorph;
     const activeWindow = this.activeWindow();
 
-    if (activeWindow && target == this) activeWindow.deactivate();
+    if (activeWindow && target === this) activeWindow.deactivate();
 
     this.handleHaloCycle(evt);
 
@@ -196,7 +185,7 @@ export class LivelyWorld extends World {
       let li;
       if (li = window.worldLoadingIndicator) {
         const oldWorld = li.world();
-        if (oldWorld.env != this.env) {
+        if (oldWorld && oldWorld.env !== this.env) {
           li.withAllSubmorphsDo(m => m._env = this.env);
           this.addMorph(li);
           await oldWorld.whenRendered();
@@ -256,12 +245,11 @@ export class LivelyWorld extends World {
   }
 
   async onNativeDrop (evt) {
-    /* global show, inspect */
     this.nativeDrop_removeUploadIndicator();
-    if (evt.targetMorph != this) return;
+    if (evt.targetMorph !== this) return;
 
     const { domEvt } = evt;
-    const { files, items } = domEvt.dataTransfer;
+    const { files } = domEvt.dataTransfer;
     const baseURL = document.location.origin;
 
     if (files.length) {
@@ -321,7 +309,7 @@ export class LivelyWorld extends World {
         }
         if (videos.length) {
           for (const v of videos) {
-            const video = Object.assign(await loadObjectFromPartsbinFolder('video morph'), {
+            Object.assign(await loadObjectFromPartsbinFolder('video morph'), {
               videoURL: v.url,
               name: v.name
             }).openInWorld();
@@ -443,7 +431,7 @@ export class LivelyWorld extends World {
       ['Exported Components',
         [
           ['Toggle Select All', () => {
-            if (this.getListedComponents().length == 0) {
+            if (this.getListedComponents().length === 0) {
               this.hiddenComponents = [];
             } else {
               this.hiddenComponents = this.withAllSubmorphsSelect(m => m.isComponent).map(m => m.name);
@@ -664,7 +652,7 @@ export class LivelyWorld extends World {
   setStatusMessage (message, StatusMessageComponent, delay = 5000, optStyle = {}) {
     if (!StatusMessage) return;
     if (!StatusMessageComponent) StatusMessageComponent = StatusMessageDefault;
-    console[StatusMessageComponent == StatusMessageError ? 'error' : 'log'](message);
+    console[StatusMessageComponent === StatusMessageError ? 'error' : 'log'](message);
     return config.verboseLogging
       ? this.openStatusMessage(part(StatusMessageComponent, { epiMorph: true, viewModel: { message }, hasFixedPosition: true, width: 300, ...optStyle }), delay)
       : null;
@@ -720,7 +708,8 @@ export class LivelyWorld extends World {
     const focused = this.focusedMorph; const visBounds = this.visibleBounds();
 
     return this.withRequesterDo(opts.requester, async (pos) => {
-      promptMorph.openInWorldNear(pos, this);
+      promptMorph.openInWorld();
+      promptMorph.center = pos;
       if (promptMorph.height > visBounds.height) { promptMorph.height = visBounds.height - 5; }
 
       if (typeof opts.customize === 'function') { opts.customize(promptMorph); }
@@ -752,8 +741,10 @@ export class LivelyWorld extends World {
   }
 
   inform (label = 'no message', opts = { fontSize: 16, requester: null, animated: true }) {
-    return this.openPrompt(new InformPrompt({ label, ...opts }), opts);
+    return this.openPrompt(part(prompts.InformPrompt, { viewModel: { label, ...opts } }), opts);
   }
+
+  // $world.prompt('hello', { forceConfirm: true })
 
   prompt (label, opts = { requester: null, input: '', historyId: null, useLastInput: false, selectInput: false }) {
     // await this.world().prompt("test", {input: "123"})
@@ -763,39 +754,48 @@ export class LivelyWorld extends World {
     //   useLastInput: BOOLEAN -- use history for default input?
     //   forceConfirm: BOOLEAN -- force the user to proceed with a valid input
     // }
-    const textPrompt = new TextPrompt({ label, ...opts });
-    if (opts.forceConfirm) {
-      textPrompt.get('cancel button').disable();
-    }
-    return this.openPrompt(textPrompt, opts);
+    // const textPrompt = new TextPrompt({ label, ...opts });
+    return this.openPrompt(part(prompts.TextPrompt, { viewModel: { label, ...opts } }), opts);
   }
 
-  editPrompt (label, opts = { requester: null, input: '', historyId: null, useLastInput: false, textStyle: null, mode: null, evalEnvironment: null }) {
-    return this.openPrompt(new EditPrompt({ label, ...opts }), opts);
+  editPrompt (label, opts = {
+    // await this.world().editPrompt("secret")
+    requester: null,
+    input: '',
+    historyId: null,
+    useLastInput: false,
+    textStyle: null,
+    mode: null,
+    evalEnvironment: null
+  }) {
+    return this.openPrompt(part(prompts.EditPrompt, { viewModel: { label, ...opts } }), opts);
   }
 
   passwordPrompt (label, opts = { requester: null, input: '' }) {
     // await this.world().passwordPrompt("secret")
-    return this.openPrompt(new PasswordPrompt({ label, ...opts }), opts);
+    return this.openPrompt(part(prompts.PasswordPrompt, { viewModel: { label, ...opts } }), opts);
   }
 
   confirm (label, opts = { requester: null, animated: true }) {
     // await this.world().confirm("test")
-    return this.openPrompt(new ConfirmPrompt({ label, ...opts }), opts);
+    return this.openPrompt(part(prompts.ConfirmPrompt, { viewModel: { label, ...opts } }), opts);
   }
 
   multipleChoicePrompt (label, opts = { requester: null, animated: true, choices: [] }) {
     // await this.world().multipleChoicePrompt("test", {choices: ["1","2","3","4"]})
-    return this.openPrompt(new MultipleChoicePrompt({ label, ...opts }), opts);
+    return this.openPrompt(part(prompts.MultipleChoicePrompt, { viewModel: { label, ...opts } }), opts);
   }
 
   listPrompt (label = '', items = [], opts = { requester: null, onSelection: null, preselect: 0 }) {
-    return this.openPrompt(new ListPrompt({
-      filterable: false,
-      padding: Rectangle.inset(3),
-      label,
-      items,
-      ...opts
+    // await this.world().listPrompt("test", ["1","2","3","4"])
+    return this.openPrompt(part(prompts.ListPrompt, {
+      viewModel: {
+        filterable: false,
+        padding: Rectangle.inset(3),
+        label,
+        items,
+        ...opts
+      }
     }), opts);
   }
 
@@ -815,24 +815,31 @@ export class LivelyWorld extends World {
       // sortFunction: (parsedInput, item) => ...
       // filterFunction: (parsedInput, item) => ...
     }) {
+    // await this.world().filterableListPrompt("test", ["1","2","3","4"])
+    let list;
+
     if (opts.prompt) {
-      const list = opts.prompt.get('list');
+      list = opts.prompt.ui.list;
       list.items = items;
       list.selectedIndex = opts.preselect || 0;
-      return this.openPrompt(opts.prompt, opts);
+      return this.openPrompt(opts.prompt.view, opts);
     }
 
-    return this.openPrompt(new ListPrompt({
-      filterable: true,
-      padding: Rectangle.inset(3),
-      label,
-      items,
-      ...opts
-    }), opts);
+    list = part(prompts.ListPrompt, {
+      viewModel: {
+        filterable: true,
+        padding: Rectangle.inset(3),
+        label,
+        items,
+        ...opts
+      }
+    });
+
+    return this.openPrompt(list, opts);
   }
 
   editListPrompt (label = '', items = [], opts = { requester: null, multiSelect: true, historyId: null }) {
-    return this.openPrompt(new EditListPrompt({ label, multiSelect: true, items, padding: Rectangle.inset(3), ...opts }), opts);
+    return this.openPrompt(part(prompts.EditListPrompt, { viewModel: { label, multiSelect: true, items, padding: Rectangle.inset(3), ...opts } }), opts);
   }
 
   showLoadingIndicatorFor (requester, label) {
@@ -964,11 +971,11 @@ export class LivelyWorld extends World {
       }]);
     }
 
-    if (self.tickingScripts.length != 0) {
+    if (self.tickingScripts.length !== 0) {
       steppingItems.push(['Stop stepping', () => self.stopStepping()]);
     }
 
-    if (steppingItems.length != 0) {
+    if (steppingItems.length !== 0) {
       items.push(['Stepping', steppingItems]);
     }
 
@@ -1024,6 +1031,9 @@ export class LivelyWorld extends World {
         })
       }).openInWorld();
     }]);
+
+    items.push(['Remove Morph', () => self.abandon(true)]);
+    items.push(['Open Inspector', () => self.inspect()]);
 
     items.push({ isDivider: true });
     items.push(['Add comment', async () => {
@@ -1175,7 +1185,7 @@ export class LivelyWorld extends World {
       haloTarget = morphsBelowTarget[0] || morphsBelow[0];
     }
     if (isShiftKey && !target.isHaloItem && haloTarget &&
-         evt.halo && evt.halo.borderBox != haloTarget) {
+         evt.halo && evt.halo.borderBox !== haloTarget) {
       evt.halo.addMorphToSelection(haloTarget);
       return;
     }

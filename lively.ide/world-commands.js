@@ -12,8 +12,9 @@ import { createMorphSnapshot } from 'lively.morphic/serialization.js';
 import { interactivelyFreezeWorld } from 'lively.freezer';
 import { resource } from 'lively.resources';
 import { BrowserModuleTranslationCache } from 'lively.modules/src/instrumentation.js';
-import { CommentBrowser } from 'lively.collab';
 import { once } from 'lively.bindings';
+import { part } from 'lively.morphic/components/core.js';
+import { CodeSearch } from './code-search.cp.js';
 
 const commands = [
 
@@ -304,9 +305,11 @@ const commands = [
       const halo = world.halos()[0];
       if (!halo || halo.changingName) return false;
 
-      halo.target.selectedMorphs
-        ? halo.target.selectedMorphs.forEach(m => m.abandon())
-        : halo.target.abandon();
+      if (halo.target.selectedMorphs) {
+        halo.target.selectedMorphs.forEach(m => m.abandon());
+        world.halos()[0].remove();
+      } else halo.target.abandon();
+
       return true;
     }
   },
@@ -941,7 +944,7 @@ const commands = [
         return null;
       }
       const li = args.loadingIndicator = LoadingIndicator.open('Open Object Editor...');
-      const { ObjectEditor } = await System.import('lively.ide/js/objecteditor/index.js');
+      const ObjectEditor = await System.import('lively.ide/js/objecteditor/ui.cp.js');
       const ed = await ObjectEditor.open(args);
       li.remove();
       return ed;
@@ -962,7 +965,7 @@ const commands = [
   {
     name: 'inspect server',
     exec: async (world) => {
-      const { default: Inspector } = await System.import('lively.ide/js/inspector.js');
+      const Inspector = await System.import('lively.ide/js/inspector/ui.cp.js');
       const { serverInterfaceFor } = await System.import('lively-system-interface');
       const remote = serverInterfaceFor(System.baseURL + 'eval');
       const evalEnvironment = {
@@ -997,7 +1000,8 @@ const commands = [
       const relayed = evt && world.relayCommandExecutionToFocusedMorph(evt);
       if (relayed) return relayed;
 
-      const { default: Browser } = await System.import('lively.ide/js/browser/index.js');
+      // const { default: Browser } = await System.import('lively.ide/js/browser/index.js');
+      const Browser = await System.import('lively.ide/js/browser/ui.cp.js');
       let browser;
       if (args) {
         const loc = obj.select(args, ['packageName', 'moduleName', 'textPosition', 'codeEntity', 'systemInterface']);
@@ -1084,7 +1088,7 @@ const commands = [
 
       const browser = opts.browser ||
                  (focused && focused.ownerChain().find(ea => ea.isBrowser));
-      const { default: Browser } = await System.import('lively.ide/js/browser/index.js');
+      const Browser = await System.import('lively.ide/js/browser/ui.cp.js');
       const { localInterface } = await System.import('lively-system-interface');
       const systemInterface = opts && opts.systemInterface
         ? opts.systemInterface
@@ -1149,7 +1153,10 @@ const commands = [
       const li = LoadingIndicator.open('loading code search');
 
       if (browser && browser.isBrowser) {
-        if (browser.state.associatedSearchPanel) { return browser.state.associatedSearchPanel.getWindow().activate(); }
+        if (browser.associatedSearchPanel) {
+          li.remove();
+          return browser.associatedSearchPanel.getWindow().activate();
+        }
       } else browser = null;
 
       const { localInterface } = await System.import('lively-system-interface');
@@ -1161,7 +1168,7 @@ const commands = [
         else systemInterface = localInterface;
       }
 
-      const searcher = await resource('part://SystemIDE/code search').read();
+      const searcher = part(CodeSearch);
       Object.assign(searcher, {
         browser,
         input: opts.input,
@@ -1173,7 +1180,7 @@ const commands = [
 
       li.remove();
 
-      if (browser) browser.state.associatedSearchPanel = searcher;
+      if (browser) browser.associatedSearchPanel = searcher;
       return searcher;
     }
   },
@@ -1392,15 +1399,7 @@ const commands = [
       }
       return true;
     }
-  },
-
-  {
-    name: 'toggle comment browser',
-    exec: async (world) => {
-      CommentBrowser.toggle();
-    }
   }
-
 ];
 
 export default commands;

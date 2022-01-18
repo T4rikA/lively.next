@@ -107,15 +107,6 @@ export class TopBarModel extends ViewModel {
           this.ui.shapeStatusIcon.textAndAttributes = Icon.textAttribute(this.shapeToIcon[shapeName].args[0]);
         }
       },
-      sideBarToIcon: {
-        readOnly: true,
-        get () {
-          return {
-            'Scene Graph': { args: ['sitemap', { textStyleClasses: ['fas'] }] },
-            'Styling Palette': { args: ['palette', { textStyleClasses: ['fas'] }] }
-          };
-        }
-      },
       shapeToIcon: {
         initialize (prevValue) {
           this.shapeToIcon = prevValue || {
@@ -164,7 +155,7 @@ export class TopBarModel extends ViewModel {
           this.shapesCreatedViaDrag = [Morph, Ellipse, HTMLMorph, Canvas, Text, Polygon, Path, Image];
         }
       },
-      expose: { get () { return ['relayout', 'attachToTarget', 'activeSideBars', 'setEditMode', 'showCurrentUser', 'showHaloFor']; } },
+      expose: { get () { return ['relayout', 'attachToTarget', 'activeSideBars', 'setEditMode', 'showCurrentUser', 'showHaloFor', 'openSideBar', 'colorCommentBrowserButton', 'uncolorCommentBrowserButton']; } },
       bindings: {
         get () {
           return [
@@ -184,7 +175,6 @@ export class TopBarModel extends ViewModel {
   onMouseDown (evt) {
     const selector = this.ui.selectShapeType;
     const shapeModeButton = this.ui.shapeModeButton;
-    const sideBarSelector = this.ui.sideBarSelector;
     const target = this.primaryTarget || this.world();
     if (evt.targetMorph == selector) {
       const menu = this.world().openWorldMenu(evt, this.getShapeMenuItems());
@@ -229,11 +219,6 @@ export class TopBarModel extends ViewModel {
 
     if (evt.targetMorph.name == 'comment browser button') {
       this.toggleCommentBrowser();
-    }
-
-    if (evt.targetMorph == sideBarSelector) {
-      const menu = this.world().openWorldMenu(evt, this.getSideBarMenuItems());
-      menu.position = sideBarSelector.globalBounds().bottomLeft().subPt(this.world().scroll);
     }
   }
 
@@ -326,31 +311,13 @@ export class TopBarModel extends ViewModel {
     });
   }
 
-  getSideBarMenuItems () {
-    return Object.entries(this.sideBarToIcon).map(([sideBarName, { args }]) => {
-      return [
-        [
-          ...this.activeSideBars.includes(sideBarName)
-            ? [
-                ...Icon.textAttribute('check', {
-                  fontSize: 11,
-                  paddingTop: '2px'
-                }), '   ', {}
-              ]
-            : ['     ', {}],
-          ...Icon.textAttribute(...args), `   ${sideBarName} `, { float: 'none' }
-        ], () => this.openSideBar(sideBarName)
-      ];
-    });
-  }
-
   reloadSidebar () {
     this.sideBar.remove();
     this.sideBar = null;
     this.stylingPalette.remove();
     this.stylingPalette = null;
-    this.openSideBar('Scene Graph');
-    this.openSideBar('Styling Palette');
+    this.openSideBar('scene graph');
+    this.openSideBar('properties panel');
   }
 
   // this.reloadSidebar()
@@ -362,7 +329,7 @@ export class TopBarModel extends ViewModel {
       this.activeSideBars.push(name);
     }
 
-    if (name == 'Scene Graph') {
+    if (name == 'scene graph') {
       if (!this.sideBar) {
         this.sideBar = part(MorphPanel);
         this.sideBar.epiMorph = true;
@@ -373,17 +340,17 @@ export class TopBarModel extends ViewModel {
         this.sideBar.right = 0;
         await this.sideBar.whenRendered();
       }
-      await this.sideBar.toggle(this.activeSideBars.includes('Scene Graph'));
+      await this.sideBar.toggle(this.activeSideBars.includes('scene graph'));
     }
 
-    if (name == 'Styling Palette') {
+    if (name == 'properties panel') {
       if (!this.stylingPalette) {
         this.stylingPalette = part(PropertiesPanel);
         this.stylingPalette.epiMorph = true;
         this.stylingPalette.hasFixedPosition = true;
         this.stylingPalette.respondsToVisibleWindow = true;
       }
-      await this.stylingPalette.toggle(this.activeSideBars.includes('Styling Palette'));
+      await this.stylingPalette.toggle(this.activeSideBars.includes('properties panel'));
     }
 
     const checker = this.ui.livelyVersionChecker;
@@ -402,17 +369,15 @@ export class TopBarModel extends ViewModel {
     label.master = TopBarButton;
   }
 
-  async toggleCommentBrowser () {
-    if (CommentBrowser.isOpen()) {
+  toggleCommentBrowser () {
+    const commentBrowser = $world.getSubmorphNamed('Comment Browser');
+    if (commentBrowser) {
       this.uncolorCommentBrowserButton();
+      commentBrowser.owner.close();
     } else {
       this.colorCommentBrowserButton();
+      part(CommentBrowser).openInWindow();
     }
-    await this.world().execCommand('toggle comment browser');
-  }
-
-  get commentCountBadge () {
-    return this.ui.commentCountBadge;
   }
 
   async interactivelyLoadComponent () {
@@ -1396,12 +1361,6 @@ const TopBar = component({
         }],
         tooltip: 'Create basic shape mode'
       },
-      part(TopBarButton, {
-        name: 'side bar selector',
-        padding: rect(14, 1, -14, -1),
-        textAndAttributes: Icon.textAttribute('columns'),
-        tooltip: 'Manage sidebars'
-      }),
       part(TopBarButton, {
         name: 'open component browser',
         fontSize: 25,

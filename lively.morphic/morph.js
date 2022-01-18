@@ -1,8 +1,8 @@
 /* global System,Uint8Array,Blob,location */
 import { Color, Line, Point, pt, rect, Rectangle, Transform } from 'lively.graphics';
-import { string, properties, obj, arr, num, promise, tree, Path as PropertyPath } from 'lively.lang';
+import { string, obj, arr, num, promise, tree, Path as PropertyPath } from 'lively.lang';
 import { signal } from 'lively.bindings';
-import { copy, deserializeSpec, ExpressionSerializer, serializeSpec, getClassName } from 'lively.serializer2';
+import { deserializeSpec, ExpressionSerializer, serializeSpec, getClassName } from 'lively.serializer2';
 import {
   renderRootMorph,
   ShadowObject
@@ -78,7 +78,7 @@ export class Morph {
         group: 'core',
         set (args) {
           if (this.master && this.master.equals(args)) return;
-          this.setProperty('master', args ? ComponentPolicy.for(this, args) : (args == false ? false : null));
+          this.setProperty('master', args ? ComponentPolicy.for(this, args) : (args === false ? false : null));
           args && this.requestMasterStyling();
         }
       },
@@ -548,7 +548,6 @@ export class Morph {
           if ('style' in x) this.borderStyleLeft = x.style;
           if ('width' in x) this.borderWidthLeft = x.width;
           if ('color' in x) this.borderColorLeft = x.color;
-          if ('radius' in x) this.borderRadiusLeft = x.radius;
         }
       },
 
@@ -568,7 +567,6 @@ export class Morph {
           if ('style' in x) this.borderStyleRight = x.style;
           if ('width' in x) this.borderWidthRight = x.width;
           if ('color' in x) this.borderColorRight = x.color;
-          if ('radius' in x) this.borderRadiusRight = x.radius;
         }
       },
 
@@ -588,7 +586,6 @@ export class Morph {
           if ('style' in x) this.borderStyleBottom = x.style;
           if ('width' in x) this.borderWidthBottom = x.width;
           if ('color' in x) this.borderColorBottom = x.color;
-          if ('radius' in x) this.borderRadiusBottom = x.radius;
         }
       },
 
@@ -608,7 +605,6 @@ export class Morph {
           if ('style' in x) this.borderStyleTop = x.style;
           if ('width' in x) this.borderWidthTop = x.width;
           if ('color' in x) this.borderColorTop = x.color;
-          if ('radius' in x) this.borderRadiusTop = x.radius;
         }
       },
 
@@ -639,31 +635,23 @@ export class Morph {
         isStyleProp: true,
         type: 'Number',
         min: 0,
-        foldable: ['top', 'left', 'right', 'bottom'],
-        defaultValue: { top: 0, bottom: 0, right: 0, left: 0, valueOf: () => 0 },
+        foldable: ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'],
+        defaultValue: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0, valueOf: () => 0 },
         get () {
           const v = this.getProperty('borderRadius');
-          return { ...v, valueOf: () => v.left };
+          return { ...v, valueOf: () => v.topLeft };
         },
         set (value) {
           if (!value) value = 0;
           if (obj.isNumber(value)) {
-            const left = value; const right = value; const top = value; const bottom = value;
-            value = { left, right, top, bottom };
-          }
-          if (value.isRectangle) {
-            value = {
-              left: value.left(),
-              right: value.right(),
-              top: value.top(),
-              bottom: value.bottom()
-            };
+            const topLeft = value; const topRight = value; const bottomRight = value; const bottomLeft = value;
+            value = { topLeft, topRight, bottomRight, bottomLeft };
           }
           this.setProperty('borderRadius', value);
         }
       },
 
-      ...generateUnfolded('borderRadius', undefined, 'styling'),
+      ...generateUnfolded('borderRadius', ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'], 'styling'),
 
       borderStyle: {
         group: 'styling',
@@ -732,7 +720,7 @@ export class Morph {
         group: 'styling',
         isStyleProp: true,
         derived: true,
-        after: ['borderStyle', 'borderWidth', 'borderColor'],
+        after: ['borderStyle', 'borderWidth', 'borderColor', 'borderRadius'],
         get () {
           const self = this;
           return {
@@ -742,8 +730,8 @@ export class Morph {
             set width (val) { self.borderWidth = val; },
             get color () { return self.borderColor; },
             set color (val) { self.borderColor = val; },
-            get borderRadius () { return self.borderRadius; },
-            set borderRadius (val) { self.borderRadius = val; }
+            get radius () { return self.borderRadius; },
+            set radius (val) { self.borderRadius = val; }
           };
         },
         set (x) {
@@ -814,7 +802,13 @@ export class Morph {
         defaultValue: []
       },
 
-      metadata: { group: 'core' }
+      metadata: { group: 'core' },
+
+      derivationIds: {
+        group: 'core',
+        defaultValue: [],
+        get () { return this.getProperty('derivationIds') || []; }
+      }
     };
   }
 
@@ -835,12 +829,14 @@ export class Morph {
     this._parametrizedProps = obj.select(props, arr.intersect(Object.keys(props), this.styleProperties));
     this.initializeProperties(props);
 
+    this.derivationIds.push(this._id);
+    
     if (props.bounds) {
       this.setBounds(props.bounds);
       this._parametrizedProps.extent = this.extent;
       this._parametrizedProps.position = this.position;
     }
-    if (props.height != undefined || props.width != undefined) { this._parametrizedProps.extent = this.extent; }
+    if (props.height !== undefined || props.width !== undefined) { this._parametrizedProps.extent = this.extent; }
     // if (props.layout) this.layout = props.layout;
 
     if (typeof this.onLoad === 'function' && !this.isComponent) this.onLoad();
@@ -884,6 +880,8 @@ export class Morph {
     if (this.viewModel) {
       this.viewModel.attach(this);
     }
+     
+    this.derivationIds.push(this._id);
   }
 
   get __only_serialize__ () {
@@ -897,7 +895,7 @@ export class Morph {
       const descr = properties[key];
       if (master &&
          master.managesMorph(this) &&
-         master._overriddenProps.get(this)[key] != undefined) {
+         master._overriddenProps.get(this)[key] !== undefined) {
         propsToSerialize.push(key); // always save away overridden props
         continue;
       }
@@ -929,13 +927,12 @@ export class Morph {
         if (pool.refForId(id).realObj.isEpiMorph) { arr.removeAt(submorphs, i); }
       }
     }
-
     for (const foldedProp of arr.intersect(this.__only_serialize__, ['borderColor', 'borderWidth', 'borderStyle', 'borderRadius'])) {
       snapshot.props[foldedProp] = {
         key: foldedProp,
         verbatim: true,
         value: obj.extract(
-          this[foldedProp], ['top', 'right', 'bottom', 'left'],
+          this[foldedProp], this.propertiesAndPropertySettings().properties[foldedProp].foldable,
           (prop, value) => value && value.isColor ? value.toTuple() : value)
       };
     }
@@ -1171,9 +1168,9 @@ export class Morph {
         prop === 'reactsToPointer') {
       this.onBoundsChanged(this.bounds());
       this.updateTransform({ [prop]: value });
-    } else if (prop == 'extent') {
+    } else if (prop === 'extent') {
       this.onBoundsChanged(this.bounds());
-    } else if (prop == 'layout') {
+    } else if (prop === 'layout') {
       if (anim) {
         value && value.attachAnimated(anim.duration, this, anim.easing);
       } else {
@@ -1356,7 +1353,7 @@ export class Morph {
 
   addStyleClass (className) { this.styleClasses = arr.uniq(this.styleClasses.concat(className)); }
   removeStyleClass (className) {
-    this.styleClasses = this.styleClasses.filter(ea => ea != className);
+    this.styleClasses = this.styleClasses.filter(ea => ea !== className);
   }
 
   adjustOrigin (newOrigin) {
@@ -1381,7 +1378,7 @@ export class Morph {
   }
 
   relativeBounds (other) {
-    var other = other || this.world();
+    other = other || this.world();
     let bounds = this.origin.negated().extent(this.extent);
 
     if (other) {
@@ -1836,13 +1833,13 @@ export class Morph {
   transformTillMorph (other, direction = 'up') {
     // faster version of transform to, that benefits from
     // having the other morph in the current morph's owner chain
-    if (direction == 'down') return other.transformTillMorph(this, 'up').inverse();
+    if (direction === 'down') return other.transformTillMorph(this, 'up').inverse();
     const tfm = new Transform();
-    for (let morph = this; morph && morph != other; morph = morph.owner) {
+    for (let morph = this; morph && morph !== other; morph = morph.owner) {
       const { origin, scroll } = morph;
       if (origin.x !== 0 || origin.y !== 0) { tfm.preConcatenate(new Transform(morph.origin)); }
       tfm.preConcatenate(morph.getTransform());
-      if (morph != this) {
+      if (morph !== this) {
         if ((scroll.x !== 0 || scroll.y !== 0) && morph.owner/*! owner means morph === world */) { tfm.preConcatenate(new Transform(scroll.negated())); }
       }
       if (morph.hasFixedPosition && morph.owner) {
@@ -1880,7 +1877,7 @@ export class Morph {
       p.y = p.y + this.position.y - this.scroll.y;
     }
     for (const [d, m] of pathToMorph) {
-      if (this != m && d == 'up') {
+      if (this !== m && d === 'up') {
         p.x -= m.scroll.x;
         p.y -= m.scroll.y;
         if (m.hasFixedPosition && m.owner && m.owner.owner) {
@@ -1889,7 +1886,7 @@ export class Morph {
         }
       }
       this.applyTransform(d, m, p);
-      if (this != m && d == 'down') {
+      if (this !== m && d === 'down') {
         p.x += m.scroll.x;
         p.y += m.scroll.y;
         if (m.hasFixedPosition && m.owner && m.owner.owner/* i.e. except world */) {
@@ -1916,7 +1913,7 @@ export class Morph {
   }
 
   applyTransform (d, m, p) {
-    if (d == 'up') {
+    if (d === 'up') {
       p.x += m.origin.x;
       p.y += m.origin.y;
       p.matrixTransform(m.getTransform(), p);
@@ -1938,14 +1935,14 @@ export class Morph {
     const commonRoot = this.closestCommonAncestor(other) || this;
     let morph = this;
     commonRoot._addPathDependant(this);
-    while (morph && morph != commonRoot) {
+    while (morph && morph !== commonRoot) {
       path.push(['up', morph]);
       morph._addPathDependant(this);
       morph = morph.owner;
     }
     morph = other;
     const firstDownIndex = path.length;
-    while (morph && morph != commonRoot) {
+    while (morph && morph !== commonRoot) {
       arr.pushAt(path, ['down', morph], firstDownIndex);
       morph._addPathDependant(this);
       morph = morph.owner;
@@ -2036,7 +2033,7 @@ export class Morph {
   }
 
   fullContainsWorldPoint (p) { // p is in world coordinates
-    return this.fullContainsPoint(this.owner == null ? p : this.owner.localize(p));
+    return this.fullContainsPoint(this.owner === null ? p : this.owner.localize(p));
   }
 
   fullContainsPoint (p) { // p is in owner coordinates
@@ -2063,7 +2060,7 @@ export class Morph {
           (this.getNameTest(this, name) && this) ||
           this.getOwnerOrOwnerSubmorphNamed(name);
     } catch (e) {
-      if (e.constructor == RangeError && e.message == 'Maximum call stack size exceeded') {
+      if (e.constructor === RangeError && e.message === 'Maximum call stack size exceeded') {
         throw new Error("'get' failed due to a stack overflow. The most\n" +
           "likely source of the problem is using 'get' as part of\n" +
           "toString, because 'get' calls 'getOwnerOrOwnerSubmorphNamed', which\n" +
@@ -2162,7 +2159,7 @@ export class Morph {
   onMouseDown (evt) {
     if (this === evt.targetMorph) {
       evt.state.clickedMorph = this;
-      if (evt.state.prevClick.clickCount == 1) {
+      if (evt.state.prevClick.clickCount === 1) {
         const timeDiff = Date.now() - evt.state.prevClick.clickedAtTime;
         if (timeDiff <= 200) {
           this.onDoubleMouseDown(evt);
@@ -2413,7 +2410,7 @@ export class Morph {
           ? `Published ${this} as ${commit.name}`
           : `Failed to publish part ${this}`,
         commit ? Color.green : Color.red);
-    } catch (e) { e != 'canceled' && world.showError(e); }
+    } catch (e) { e !== 'canceled' && world.showError(e); }
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -2547,22 +2544,23 @@ export class Morph {
   // comments
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   async addComment (commentText, relativePosition = pt(0, 0)) {
-    const { Comment, CommentBrowser } = await System.import('lively.collab');
-    const comment = new Comment(commentText, relativePosition);
+    const { CommentData } = await System.import('lively.collab');
+    const comment = new CommentData(commentText, relativePosition);
     this.comments.push(comment);
-    await CommentBrowser.addCommentForMorph(comment, this);
+    const commentBrowser = $world.getSubmorphNamed('Comment Browser');
+    if (commentBrowser) commentBrowser.viewModel.addCommentForMorph(comment, this);
     return comment;
   }
 
-  async removeComment (commentToRemove) {
-    const { CommentBrowser } = await System.import('lively.collab');
+  removeComment (commentToRemove) {
+    const commentBrowser = $world.getSubmorphNamed('Comment Browser');
+    if (commentBrowser) commentBrowser.viewModel.removeCommentForMorph(commentToRemove, this);
     this.comments = this.comments.filter(comment => !commentToRemove.equals(comment));
-    CommentBrowser.removeCommentForMorph(commentToRemove, this);
   }
 
-  async emptyComments () {
-    const { CommentBrowser } = await System.import('lively.collab');
-    this.comments.forEach((comment) => CommentBrowser.removeCommentForMorph(comment, this));
+  emptyComments () {
+    const commentBrowser = $world.getSubmorphNamed('Comment Browser');  
+    if (commentBrowser) this.comments.forEach((comment) => commentBrowser.viewModel.removeCommentForMorph(comment, this));
     this.comments = [];
   }
 
@@ -2619,29 +2617,22 @@ export class Morph {
     return this.commandHandler.exec(command, this, args, count, evt);
   }
 }
-
+/**
+ * Custom render logic is applied to transform a rectangle into an ellipse by cutting the corners based on its width and height.
+ */
 export class Ellipse extends Morph {
-  // cut the corners so that a rectangle becomes an ellipse
   static get properties () {
     return {
-      borderRadius: {
-        derived: true,
-        get () {
-          return {
-            top: this.borderRadiusTop,
-            right: this.borderRadiusRight,
-            left: this.borderRadiusLeft,
-            bottom: this.borderRadiusBottom,
-            valueOf: () => this.borderRadiusLeft
-          };
-        }
-      },
-      isEllipse: { get () { return true; } },
-      borderRadiusLeft: { get () { return this.height; }, set () {} },
-      borderRadiusRight: { get () { return this.height; }, set () {} },
-      borderRadiusTop: { get () { return this.width; }, set () {} },
-      borderRadiusBottom: { get () { return this.width; }, set () {} }
+      isEllipse: { get () { return true; } }
     };
+  }
+
+  render (renderer) {
+    if (this._requestMasterStyling) {
+      this.master && this.master.applyIfNeeded(true);
+      this._requestMasterStyling = false;
+    }
+    return renderer.renderEllipse(this);
   }
 }
 
@@ -2659,16 +2650,16 @@ export class Triangle extends Morph {
   }
 
   onChange (change) {
-    if (change.prop == 'extent' ||
-     change.prop == 'direction' ||
-     (change.prop == 'fill' && change.value)
+    if (change.prop === 'extent' ||
+     change.prop === 'direction' ||
+     (change.prop === 'fill' && change.value)
     ) this.update();
     super.onChange(change);
   }
 
   update () {
     const { x: width, y: height } = this.extent;
-    if (width != height) this.extent = pt(Math.max(width, height), Math.max(width, height));
+    if (width !== height) this.extent = pt(Math.max(width, height), Math.max(width, height));
 
     this.origin = pt(width / 2, height / 2);
 
@@ -2721,6 +2712,9 @@ export class Image extends Morph {
       autoResize: {
         isStyleProp: true,
         defaultValue: false
+      },
+      clipMode: {
+        defaultValue: 'auto'
       }
     };
   }
@@ -2916,7 +2910,6 @@ export class Image extends Morph {
 
   crop (cropBounds) {
     const { ctx, canvas, image } = this.canvasElementAndContext();
-    const { width, height } = this;
     const innerBounds = this.innerBounds();
     const { width: imageWidth, height: imageHeight } = image;
     const intersection = innerBounds.intersection(cropBounds);
@@ -3048,9 +3041,9 @@ export class PathPoint {
   }
 
   moveControlPoint (name, delta) {
-    var acp = this.controlPoints[name];
-    var acp = acp ? acp.addPt(delta) : delta;
-    const other = name == 'next' ? 'previous' : 'next';
+    let acp = this.controlPoints[name];
+    acp = acp ? acp.addPt(delta) : delta;
+    const other = name === 'next' ? 'previous' : 'next';
     let bcp = this.controlPoints[other];
     if (this.isSmooth) {
       bcp = acp.negated().normalized().scaleBy(bcp.r());
@@ -3213,7 +3206,7 @@ export class Path extends Morph {
   __additionally_serialize__ (snapshot, ref, pool, addFn) {
     super.__additionally_serialize__(snapshot, ref, pool, addFn);
     const draggable = this.getProperty('draggable');
-    if (draggable != this.propertiesAndPropertySettings().properties.draggable.defaultValue) { snapshot.props.draggable = { value: draggable }; }
+    if (draggable !== this.propertiesAndPropertySettings().properties.draggable.defaultValue) { snapshot.props.draggable = { value: draggable }; }
     const c = this.borderColor.valueOf();
     if (!c) return;
     snapshot.props.borderColor = {
@@ -3268,8 +3261,8 @@ export class Path extends Morph {
   onChange (change) {
     const { prop, value, prevValue } = change;
     const { _adjustingVertices, _adjustingOrigin } = this;
-    if (prop == 'extent' && value && prevValue && !_adjustingVertices) { this.adjustVertices(value.scaleByPt(prevValue.inverted())); }
-    if (!_adjustingOrigin && prop === 'vertices' || prop === 'borderWidthLeft') { this.updateBounds(prop == 'vertices' ? value : this.vertices); }
+    if (prop === 'extent' && value && prevValue && !_adjustingVertices) { this.adjustVertices(value.scaleByPt(prevValue.inverted())); }
+    if (!_adjustingOrigin && prop === 'vertices' || prop === 'borderWidthLeft') { this.updateBounds(prop === 'vertices' ? value : this.vertices); }
     if (!_adjustingVertices && prop === 'origin') { this.updateBounds(this.vertices); }
     super.onChange(change);
   }
@@ -3408,7 +3401,7 @@ export class Path extends Morph {
     ) {
       const samples = samplePathPoints(pathNode, toLength, fromLength, nSamples);
       let minDist = Infinity; let minIndex = -1;
-      for (const [point, atLength, i] of samples) {
+      for (const [point, _, i] of samples) {
         const dist = pos.dist(point);
         if (dist >= minDist) continue;
         minDist = dist; minIndex = i;
@@ -3455,7 +3448,7 @@ export class Path extends Morph {
 
   onDrag (evt) {
     if (!this._controlPointDrag) return super.onDrag(evt);
-    const { target, n, ctrlN } = this._controlPointDrag;
+    const { n, ctrlN } = this._controlPointDrag;
     const { vertices } = this;
     const v = vertices[n];
     if (v) {
