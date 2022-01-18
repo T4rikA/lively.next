@@ -48,9 +48,14 @@ describe('lively.merger >> Merger', () => {
   });
 
   describe('#propertiesFromMorph', () => {
-    it('returns all properties except styleProperties', () => {
+    it('returns all non derived properties', () => {
       const properties = Merger.propertiesFromMorph(morph1);
-      const referenceProperties = morph1.propertiesAndPropertySettings().properties;
+      Object.filter = (obj, predicate) => 
+        Object.keys(obj)
+          .filter(key => predicate(obj[key]))
+          .reduce((res, key) => (res[key] = obj[key], res), {});
+      
+      const referenceProperties = Object.filter(morph1.propertiesAndPropertySettings().properties, property => !property.derived);
 
       Object.keys(referenceProperties).forEach(key => {
         if (key !== 'styleProperties') expect(properties).to.have.property(key);
