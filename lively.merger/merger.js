@@ -27,21 +27,35 @@ export class Merger {
       throw new Error('Cannot merge objects that are not morphs');
     }
 
-    if (JSON.stringify(morph1.styleClasses) !== JSON.stringify(morph2.styleClasses)) {
-      throw new Error('Cannot merge morphs, styleclasses differ');
-    }
+    let parentMorph = this.getLowestCommonAncestor(morph1, morph2);
 
-    let baseMorph = new Morph();
-    let propertiesBaseMorph = this.propertiesFromMorph(baseMorph);
+    let propertiesMorph1 = {};
+    let propertiesMorph2 = {};
+    let propertiesParentMorph = {};
 
-    let propertiesMorph1 = this.propertiesFromMorph(morph1);
-    let propertiesMorph2 = this.propertiesFromMorph(morph2);
-
+    Object.keys(morph1.propertiesAndPropertySettings().properties).forEach(key => {
+      if (key !== 'styleProperties') { propertiesMorph1[key] = morph1[key]; }
+    });
+    Object.keys(morph2.propertiesAndPropertySettings().properties).forEach(key => {
+      if (key !== 'styleProperties') { propertiesMorph2[key] = morph2[key]; }
+    });
+    Object.keys(parentMorph.propertiesAndPropertySettings().properties).forEach(key => {
+      if (key !== 'styleProperties') { propertiesParentMorph[key] = parentMorph[key]; }
+    });
     let result = mergeObjects(
-      propertiesBaseMorph,
+      propertiesParentMorph,
       propertiesMorph1,
       propertiesMorph2);
     // TODO conflict resolve
     return new Morph(result.properties);
+  }
+
+  static getLowestCommonAncestor (morph1, morph2) {
+    const idsOfFirstInSecond = morph1.derivationIDs.map(id => morph2.derivationIDs.indexOf(id));
+
+    let index = idsOfFirstInSecond.length;
+    while (index-- && !idsOfFirstInSecond[index]);
+
+    return $world.submorphs.filter(morph => morph.id === idsOfFirstInSecond[index])[0] || new Morph();
   }
 }
