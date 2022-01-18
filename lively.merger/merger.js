@@ -33,15 +33,6 @@ export class Merger {
     let propertiesMorph2 = {};
     let propertiesParentMorph = {};
 
-    Object.keys(morph1.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph1[key] = morph1[key]; }
-    });
-    Object.keys(morph2.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesMorph2[key] = morph2[key]; }
-    });
-    Object.keys(parentMorph.propertiesAndPropertySettings().properties).forEach(key => {
-      if (key !== 'styleProperties') { propertiesParentMorph[key] = parentMorph[key]; }
-    });
     let result = mergeObjects(
       propertiesParentMorph,
       propertiesMorph1,
@@ -51,13 +42,13 @@ export class Merger {
   }
 
   static getLowestCommonAncestor (morph1, morph2) {
-    for (let index = morph1.derivationIDs.length - 1; index > 0; index--) {
-      const currentId = morph1.derivationIDs[index];
+    for (let index = morph1.derivationIds.length - 1; index >= 0; index--) {
+      const currentId = morph1.derivationIds[index];
 
-      if (morph2.derivationIDs.includes(currentId)) {
-        const parentMorph = $world.submorphs.filter(morph => morph.id === currentId)[0]
+      if (morph2.derivationIds.includes(currentId)) {
+        const parentMorph = $world.submorphs.filter(morph => morph.id === currentId)[0];
         if (parentMorph) {
-          return parentMorph
+          return parentMorph;
         } else {
           // TODO: go to morphicDB to get the last saved snapshot
         }
