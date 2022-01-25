@@ -37,7 +37,7 @@ export class Merger {
   ) {
     const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
     if (!morphA) {
-      throw new Error(`Cannot merge morphs, morph1 with id ${morphAid} not found`);
+      throw new Error(`Cannot merge morphs, morphA with id ${morphAid} not found`);
     }
     const morphB = $world.submorphs.filter(morph => morph.id === morphBid)[0];
     if (!morphB) {
