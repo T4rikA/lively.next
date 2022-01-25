@@ -8,26 +8,26 @@ import { Morph, Ellipse } from 'lively.morphic';
 import { Color } from 'lively.graphics';
 
 describe('lively.merger >> Merger', () => {
-  let parent, morph1, morph2;
+  let parent, morphA, morphB;
   beforeEach(() => {
     parent = new Morph();
-    morph1 = parent.copy();
-    morph2 = parent.copy();
+    morphA = parent.copy();
+    morphB = parent.copy();
 
     parent.openInWorld();
-    morph1.openInWorld();
-    morph2.openInWorld();
+    morphA.openInWorld();
+    morphB.openInWorld();
   });
 
   afterEach(() => {
     parent.abandon();
-    morph1.abandon();
-    morph2.abandon();
+    morphA.abandon();
+    morphB.abandon();
   });
 
   describe('#getLowestCommonAncestor', () => {
     it('detects the correct parent when it is in the world', () => {
-      const result = Merger.getLowestCommonAncestor(morph1, morph2);
+      const result = Merger.getLowestCommonAncestor(morphA, morphB);
 
       expect(result.id).to.equal(parent.id);
     });
@@ -38,7 +38,7 @@ describe('lively.merger >> Merger', () => {
     it('detects the correct parent when it is not in the world', () => {
       
       parent.remove();
-      const result = Merger.getLowestCommonAncestor(morph1, morph2);
+      const result = Merger.getLowestCommonAncestor(morphA, morphB);
 
       expect(result.id).to.equal(parent.id);
     });
@@ -51,9 +51,14 @@ describe('lively.merger >> Merger', () => {
   });
 
   describe('#propertiesFromMorph', () => {
-    it('returns all properties except styleProperties', () => {
-      const properties = Merger.propertiesFromMorph(morph1);
-      const referenceProperties = morph1.propertiesAndPropertySettings().properties;
+    it('returns all non derived properties', () => {
+      const properties = Merger.propertiesFromMorph(morphA);
+      Object.filter = (obj, predicate) => 
+        Object.keys(obj)
+          .filter(key => predicate(obj[key]))
+          .reduce((res, key) => (res[key] = obj[key], res), {});
+      
+      const referenceProperties = Object.filter(morphA.propertiesAndPropertySettings().properties, property => !property.derived);
 
       Object.keys(referenceProperties).forEach(key => {
         if (key !== 'styleProperties') expect(properties).to.have.property(key);
@@ -68,14 +73,14 @@ describe('lively.merger >> Merger', () => {
   describe('#mergeMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
-        Merger.mergeMorphsWithIds('morph1id', 'morph2id');
-      }).to.throw('Cannot merge morphs, morph1 with id morph1id not found');
+        Merger.mergeMorphsWithIds('morphAid', 'morphBid');
+      }).to.throw('Cannot merge morphs, morphA with id morphAid not found');
     });
 
     it('detects if the morphs with the second ID is not alive', () => {
       expect(() => {
-        Merger.mergeMorphsWithIds(morph1.id, 'morph2id');
-      }).to.throw('Cannot merge morphs, morph2 with id morph2id not found');
+        Merger.mergeMorphsWithIds(morphA.id, 'morphBid');
+      }).to.throw('Cannot merge morphs, morphB with id morphBid not found');
     });
 
     it('calls the onMergeResult callback, if given', () => {
@@ -95,26 +100,26 @@ describe('lively.merger >> Merger', () => {
     });
 
     it('detects if the morphs do not have the same styleclass', () => {
-      morph1.abandon();
-      morph1 = new Ellipse();
-      morph1.openInWorld();
+      morphA.abandon();
+      morphA = new Ellipse();
+      morphA.openInWorld();
 
       expect(() => {
-        Merger.mergeMorphs(morph1, morph2);
+        Merger.mergeMorphs(morphA, morphB);
       }).to.throw('Cannot merge morphs, styleclasses differ');
     });
 
     it('returns a morph', () => {
-      const merged = Merger.mergeMorphs(morph1, morph2);
+      const merged = Merger.mergeMorphs(morphA, morphB);
 
       expect(merged).to.be.an.instanceOf(Morph);
     });
 
     it('returns a morph with combined properties', () => {
-      morph1.fill = Color.red;
-      morph2.name = 'name2';
+      morphA.fill = Color.red;
+      morphB.name = 'name2';
 
-      const merged = Merger.mergeMorphs(morph1, morph2);
+      const merged = Merger.mergeMorphs(morphA, morphB);
 
       expect(merged.name).to.equal('name2');
       expect(merged.fill).to.equal(Color.red);

@@ -2,64 +2,70 @@ import { mergeObjects } from './3-way-merger.js';
 import { Morph } from 'lively.morphic';
 
 export class Merger {
-  static propertiesFromMorph (morph) {
+  static propertiesFromMorph (morph) {    
     const properties = {};
-    Object.keys(morph.propertiesAndPropertySettings().properties).forEach(key => {
+
+    Object.filter = (obj, predicate) => 
+      Object.keys(obj)
+        .filter(key => predicate(obj[key]))
+        .reduce((res, key) => (res[key] = obj[key], res), {});
+    
+    Object.keys(Object.filter(morph.propertiesAndPropertySettings().properties, property => !property.derived)).forEach(key => {
       if (key !== ('styleProperties' || 'style')) { properties[key] = morph[key]; }
     });
     return properties;
   }
 
   static mergeMorphsWithIds (
-    morph1id, 
-    morph2id, 
+    morphAid, 
+    morphBid, 
     onMergeResult = (properties, mergeConficts) => new Morph(properties)
   ) {
-    const morph1 = $world.submorphs.filter(morph => morph.id === morph1id)[0];
-    if (!morph1) {
+    const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
+    if (!morphA) {
       throw new Error(`Cannot merge morphs, morph1 with id ${morph1id} not found`);
     }
-    const morph2 = $world.submorphs.filter(morph => morph.id === morph2id)[0];
-    if (!morph2) {
-      throw new Error(`Cannot merge morphs, morph2 with id ${morph2id} not found`);
+    const morphB = $world.submorphs.filter(morph => morph.id === morphBid)[0];
+    if (!morphB) {
+      throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
     }
     return this.mergeMorphs(
-      morph1, 
-      morph2, 
+      morphA, 
+      morphB, 
       (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
   }
 
   static mergeMorphs (
-    morph1, 
-    morph2, 
+    morphA, 
+    morphB, 
     onMergeResult = (properties, mergeConficts) => new Morph(properties)
   ) {
-    if (!morph1.isMorph || !morph2.isMorph) {
+    if (!morphA.isMorph || !morphB.isMorph) {
       throw new Error('Cannot merge objects that are not morphs');
     }
-    if (JSON.stringify(morph1.styleClasses) !== JSON.stringify(morph2.styleClasses)) {
+    if (JSON.stringify(morphA.styleClasses) !== JSON.stringify(morphB.styleClasses)) {
       throw new Error('Cannot merge morphs, styleclasses differ');
     }
 
-    let parentMorph = this.getLowestCommonAncestor(morph1, morph2);
+    let parentMorph = this.getLowestCommonAncestor(morphA, morphB);
 
-    let propertiesMorph1 = this.propertiesFromMorph(morph1);
-    let propertiesMorph2 = this.propertiesFromMorph(morph2);
+    let propertiesmorphA = this.propertiesFromMorph(morphA);
+    let propertiesmorphB = this.propertiesFromMorph(morphB);
     let propertiesParentMorph = this.propertiesFromMorph(parentMorph);
 
     let result = mergeObjects(
       propertiesParentMorph,
-      propertiesMorph1,
-      propertiesMorph2);
+      propertiesmorphA,
+      propertiesmorphB);
     // TODO conflict resolve
     return onMergeResult(result.properties, result.mergeConflicts);
   }
 
-  static getLowestCommonAncestor (morph1, morph2) {
-    for (let index = morph1.derivationIds.length - 1; index >= 0; index--) {
-      const currentId = morph1.derivationIds[index];
+  static getLowestCommonAncestor (morphA, morphB) {
+    for (let index = morphA.derivationIds.length - 1; index >= 0; index--) {
+      const currentId = morphA.derivationIds[index];
 
-      if (morph2.derivationIds.includes(currentId)) {
+      if (morphB.derivationIds.includes(currentId)) {
         const parentMorph = $world.submorphs.filter(morph => morph.id === currentId)[0];
         if (parentMorph) {
           return parentMorph;

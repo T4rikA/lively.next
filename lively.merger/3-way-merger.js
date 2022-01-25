@@ -27,6 +27,7 @@ export function mergeObjects (
   o, a, b, 
   onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
 ) {
+  mergeConflicts = [];
   let properties = merge(o, a, b);
   return onMergeResult(properties, mergeConflicts);
 }

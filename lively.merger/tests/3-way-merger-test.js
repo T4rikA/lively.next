@@ -1,20 +1,20 @@
-/* global describe, it, beforeEach, afterEach, before */
+/* global describe, it, beforeEach */
 import { expect, chai } from 'mocha-es6';
 import spies from 'https://jspm.dev/chai-spies';
 chai.use(spies);
 
-import { merge, mergeObjects } from '../3-way-merger.js';
+import { mergeObjects } from '../3-way-merger.js';
 import { Color, Point } from 'lively.graphics';
 
 describe('lively.merger >> 3-way-merger', () => {
-  describe('#merge', () => {
+  describe('#mergeObjects', () => {
     describe('safety checks', () => {
       let primitiveObjects = ['test', 1, true, undefined, NaN, null];
 
       it('detects if the base is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            merge(obj, {}, {});
+            mergeObjects(obj, {}, {});
           }).to.throw('Parent must be an object');
         });
       });
@@ -22,7 +22,7 @@ describe('lively.merger >> 3-way-merger', () => {
       it('detects if the first child is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            merge({}, obj, {});
+            mergeObjects({}, obj, {});
           }).to.throw('First child must be an object');
         });
       });
@@ -30,14 +30,14 @@ describe('lively.merger >> 3-way-merger', () => {
       it('detects if the second child is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            merge({}, {}, obj);
+            mergeObjects({}, {}, obj);
           }).to.throw('Second child must be an object');
         });
       });
     });
 
     describe('merging', () => {
-      let base, child1, child2;
+      let base, childA, childB;
       beforeEach(() => {
         base = {
           name: 'test',
@@ -45,13 +45,13 @@ describe('lively.merger >> 3-way-merger', () => {
           position: new Point(200, 100)
         };
 
-        child1 = {
+        childA = {
           name: 'hello there',
           color: Color.red,
           position: new Point(200, 100)
         };
 
-        child2 = {
+        childB = {
           name: 'test',
           color: Color.green,
           position: new Point(100, 100)
@@ -59,21 +59,21 @@ describe('lively.merger >> 3-way-merger', () => {
       });
 
       it('handles color objects correctly', () => {
-        const result = merge(base, child1, child2);
-        expect(result.color).to.equal(Color.green);
+        const result = mergeObjects(base, childA, childB);
+        expect(result.properties.color).to.equal(Color.green);
       });
 
       it('handles point objects correctly', () => {
-        const result = merge(base, child1, child2);
-        expect(result.position).to.equal(new Point(100, 100));
+        const result = mergeObjects(base, childA, childB);
+        expect(result.properties.position).to.equal(new Point(100, 100));
       });
 
       it('merges objects correctly, if there is no conflict', () => {
-        const result = merge(base, child1, child2);
+        const result = mergeObjects(base, childA, childB);
 
-        expect(result.name).to.equal('hello there');
-        expect(result.color).to.equal(Color.green);
-        expect(result.position).to.equal(new Point(100, 100));
+        expect(result.properties.name).to.equal('hello there');
+        expect(result.properties.color).to.equal(Color.green);
+        expect(result.properties.position).to.equal(new Point(100, 100));
       });
 
       it('calls the onMergeConflic callback, if given', () => {
