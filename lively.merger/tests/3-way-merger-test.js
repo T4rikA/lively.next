@@ -34,7 +34,7 @@ describe('lively.merger >> 3-way-merger', () => {
     });
 
     describe('merging', () => {
-      let base, child1, child2;
+      let base, childA, childB;
       beforeEach(() => {
         base = {
           name: 'test',
@@ -42,13 +42,13 @@ describe('lively.merger >> 3-way-merger', () => {
           position: new Point(200, 100)
         };
 
-        child1 = {
+        childA = {
           name: 'hello there',
           color: Color.red,
           position: new Point(200, 100)
         };
 
-        child2 = {
+        childB = {
           name: 'test',
           color: Color.green,
           position: new Point(100, 100)
@@ -56,17 +56,17 @@ describe('lively.merger >> 3-way-merger', () => {
       });
 
       it('handles color objects correctly', () => {
-        const result = mergeObjects(base, child1, child2);
+        const result = mergeObjects(base, childA, childB);
         expect(result.properties.color).to.equal(Color.green);
       });
 
       it('handles point objects correctly', () => {
-        const result = mergeObjects(base, child1, child2);
+        const result = mergeObjects(base, childA, childB);
         expect(result.properties.position).to.equal(new Point(100, 100));
       });
 
       it('merges objects correctly, if there is no conflict', () => {
-        const result = mergeObjects(base, child1, child2);
+        const result = mergeObjects(base, childA, childB);
 
         expect(result.properties.name).to.equal('hello there');
         expect(result.properties.color).to.equal(Color.green);
