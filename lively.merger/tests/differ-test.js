@@ -14,31 +14,31 @@ function isEmpty (obj) {
 }
 
 describe('lively.merger >> Differ', () => {
-  let morph1, morph2;
+  let morphA, morphB;
   beforeEach(() => {
-    morph1 = new Morph();
-    morph2 = new Morph();
+    morphA = new Morph();
+    morphB = new Morph();
 
-    morph1.openInWorld();
-    morph2.openInWorld();
+    morphA.openInWorld();
+    morphB.openInWorld();
   });
 
   afterEach(() => {
-    morph1.abandon();
-    morph2.abandon();
+    morphA.abandon();
+    morphB.abandon();
   });
 
   describe('#diffMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
-        Differ.diffMorphsWithIds('morph1id', 'morph2id');
-      }).to.throw('Cannot diff morphs, morph1 with id morph1id not found');
+        Differ.diffMorphsWithIds('morphAid', 'morphBid');
+      }).to.throw('Cannot diff morphs, morphA with id morphAid not found');
     });
 
     it('detects if the morphs with the second ID is not alive', () => {
       expect(() => {
-        Differ.diffMorphsWithIds(morph1.id, 'morph2id');
-      }).to.throw('Cannot diff morphs, morph2 with id morph2id not found');
+        Differ.diffMorphsWithIds(morphA.id, 'morphBid');
+      }).to.throw('Cannot diff morphs, morphB with id morphBid not found');
     });
   });
 
@@ -50,48 +50,48 @@ describe('lively.merger >> Differ', () => {
     });
 
     it('detects if the morphs do not have the same styleclass', () => {
-      morph1.abandon();
-      morph1 = new Ellipse();
-      morph1.openInWorld();
+      morphA.abandon();
+      morphA = new Ellipse();
+      morphA.openInWorld();
 
       expect(() => {
-        Differ.diffMorphs(morph1, morph2);
+        Differ.diffMorphs(morphA, morphB);
       }).to.throw('Cannot diff morphs, styleclasses differ');
     });
 
     it("has an empty 'differing' set if the objects to merge are the same", () => {
-      const diffingResult = Differ.diffMorphs(morph1, morph1);
+      const diffingResult = Differ.diffMorphs(morphA, morphA);
 
       expect(isEmpty(diffingResult.differingProperties));
     });
 
     it("has a 'matching' set that equals the objects to merge if they are the same", () => {
       let allProperties = {};
-      for (const [key, value] of Object.entries(morph1.propertiesAndPropertySettings().properties)) {
-        allProperties[key] = morph1[key];
+      for (const [key, value] of Object.entries(morphA.propertiesAndPropertySettings().properties)) {
+        allProperties[key] = morphA[key];
       }
       allProperties = JSON.stringify(allProperties);
 
-      const diffingResult = Differ.diffMorphs(morph1, morph1);
+      const diffingResult = Differ.diffMorphs(morphA, morphA);
       let matchingProperties = JSON.stringify(diffingResult.matchingProperties);
 
       expect(matchingProperties).to.equal(allProperties);
     });
 
     it("detects a changed property as 'differing'", () => {
-      morph2.fill = Color.red;
+      morphB.fill = Color.red;
 
-      const diffingResult = Differ.diffMorphs(morph1, morph2);
+      const diffingResult = Differ.diffMorphs(morphA, morphB);
 
       expect(Object.keys(diffingResult.differingProperties).includes('fill'));
       expect(!Object.keys(diffingResult.matchingProperties).includes('fill'));
     });
 
     it("detects a equally set property as 'matching'", () => {
-      morph1.fill = Color.red;
-      morph2.fill = Color.red;
+      morphA.fill = Color.red;
+      morphB.fill = Color.red;
 
-      const diffingResult = Differ.diffMorphs(morph1, morph2);
+      const diffingResult = Differ.diffMorphs(morphA, morphB);
 
       expect(!Object.keys(diffingResult.differingProperties).includes('fill'));
       expect(Object.keys(diffingResult.matchingProperties).includes('fill'));
