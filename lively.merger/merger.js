@@ -16,6 +16,20 @@ export class Merger {
     return properties;
   }
 
+  static mergeMorphsWithIdsIntoA (morphAid, morphBid) {
+    return this.mergeMorphsWithIds(morphAid, morphBid, (properties, mergeConflicts) => {
+      const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
+      Object.keys(properties).forEach(key => {
+        morphA[key] = properties[key];
+      });
+      return morphA;
+    });
+  }
+
+  static mergeMorphsWithIdsIntoB (morphAid, morphBid) {
+    return this.mergeMorphsWithIdsIntoA(morphBid, morphAid);
+  }
+
   static mergeMorphsWithIds (
     morphAid, 
     morphBid, 
@@ -23,7 +37,7 @@ export class Merger {
   ) {
     const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
     if (!morphA) {
-      throw new Error(`Cannot merge morphs, morph1 with id ${morph1id} not found`);
+      throw new Error(`Cannot merge morphs, morph1 with id ${morphAid} not found`);
     }
     const morphB = $world.submorphs.filter(morph => morph.id === morphBid)[0];
     if (!morphB) {
@@ -33,6 +47,19 @@ export class Merger {
       morphA, 
       morphB, 
       (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
+  }
+
+  static mergeMorphsIntoA (morphA, morphB) {
+    return this.mergeMorphs(morphA, morphB, (properties, mergeConflicts) => {
+      Object.keys(properties).forEach(key => {
+        morphA[key] = properties[key];
+      });
+      return morphA;
+    });
+  }
+
+  static mergeMorphsIntoB (morphA, morphB) {
+    return this.mergeMorphsIntoA(morphB, morphA);
   }
 
   static mergeMorphs (
