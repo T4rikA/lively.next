@@ -89,6 +89,8 @@ function _mergeObjects (base, childA, childB) {
           } 
           result[property] = merge(newBase, childA[property], childB[property]);
         } else if (nullSafeEqual(childB, base, property)) {
+          new MergeConflict(property, childA[property], childB[property]);
+          // TODO: change this, when we are able to handle merge conflicts
           result[property] = childA[property];
         }
       }
