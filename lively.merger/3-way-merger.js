@@ -23,12 +23,16 @@ class MergeConflict {
   }
 }
 
-function nullSafeEqual (a, b, property) {
+function nullSafeEqualPropertyValue (a, b, property) {
   return (a ? a[property] : undefined) === (b ? b[property] : undefined);
 }
 
 function isCompoundObject (obj, property) {
   return typeof (obj ? obj[property] : undefined) === 'object';
+}
+
+function hasConflict (base, childA, childB) {
+  return base !== childA && base !== childB && childA !== childB;
 }
 
 function specialPropertyResolvingNeeded (valueA, valueB) {
@@ -42,7 +46,7 @@ function specialPropertyResolvingNeeded (valueA, valueB) {
 }
 
 function resolveSpecialProperty (base, childA, childB, property) {
-  if (!base.equals(childA) && !base.equals(childB) && !childA.equals(childB)) {
+  if (!base.equals(childA) && !base.equals(childB) && !childA.equals) {
     new MergeConflict(property, childA, childB);
     return base; // TODO: should be changed later when merge conflicts can be resolved
   } else { return childA.equals(base) ? childB : childA; }
@@ -61,7 +65,7 @@ function merge (base, childA, childB) {
 }
 
 function _mergeObjects (base, childA, childB) {
-  let result;
+  let result = {};
   
   if (Array.isArray(childA)) {
     childA = {};
@@ -88,7 +92,9 @@ function _mergeObjects (base, childA, childB) {
             newBase = base[property];
           } 
           result[property] = merge(newBase, childA[property], childB[property]);
-        } else if (nullSafeEqual(childB, base, property)) {
+        } else if (nullSafeEqualPropertyValue(childB, base, property)) {
+          result[property] = childA[property];
+        } else if (hasConflict(base[property], childA[property], childB[property])) {
           new MergeConflict(property, childA[property], childB[property]);
           // TODO: change this, when we are able to handle merge conflicts
           result[property] = childA[property];
@@ -100,7 +106,8 @@ function _mergeObjects (base, childA, childB) {
 }
 
 function _mergeArrays (base, childA, childB) {
-  let result;
+  let result = [];
+  
   if (!Array.isArray(childA)) {
     childA = [];
   }
