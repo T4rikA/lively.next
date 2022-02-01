@@ -16,7 +16,25 @@ export class Merger {
     return properties;
   }
 
-  static mergeMorphsWithIds (morphAid, morphBid) {
+  static mergeMorphsWithIdsIntoA (morphAid, morphBid) {
+    return this.mergeMorphsWithIds(morphAid, morphBid, (properties, mergeConflicts) => {
+      const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
+      Object.keys(properties).forEach(key => {
+        morphA[key] = properties[key];
+      });
+      return morphA;
+    });
+  }
+
+  static mergeMorphsWithIdsIntoB (morphAid, morphBid) {
+    return this.mergeMorphsWithIdsIntoA(morphBid, morphAid);
+  }
+
+  static mergeMorphsWithIds (
+    morphAid, 
+    morphBid, 
+    onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  ) {
     const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
     if (!morphA) {
       throw new Error(`Cannot merge morphs, morphA with id ${morphAid} not found`);
@@ -25,10 +43,30 @@ export class Merger {
     if (!morphB) {
       throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
     }
-    return this.mergeMorphs(morphA, morphB);
+    return this.mergeMorphs(
+      morphA, 
+      morphB, 
+      (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
   }
 
-  static mergeMorphs (morphA, morphB) {
+  static mergeMorphsIntoA (morphA, morphB) {
+    return this.mergeMorphs(morphA, morphB, (properties, mergeConflicts) => {
+      Object.keys(properties).forEach(key => {
+        morphA[key] = properties[key];
+      });
+      return morphA;
+    });
+  }
+
+  static mergeMorphsIntoB (morphA, morphB) {
+    return this.mergeMorphsIntoA(morphB, morphA);
+  }
+
+  static mergeMorphs (
+    morphA, 
+    morphB, 
+    onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  ) {
     if (!morphA.isMorph || !morphB.isMorph) {
       throw new Error('Cannot merge objects that are not morphs');
     }
@@ -47,7 +85,7 @@ export class Merger {
       propertiesmorphA,
       propertiesmorphB);
     // TODO conflict resolve
-    return new Morph(result.properties);
+    return onMergeResult(result.properties, result.mergeConflicts);
   }
 
   static getLowestCommonAncestor (morphA, morphB) {
