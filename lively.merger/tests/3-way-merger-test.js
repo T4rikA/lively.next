@@ -70,19 +70,22 @@ describe('lively.merger >> 3-way-merger', () => {
         base = {
           name: 'test',
           color: Color.red,
-          position: new Point(200, 100)
+          position: new Point(200, 100),
+          count: 20
         };
 
         childA = {
           name: 'hello there',
           color: Color.red,
-          position: new Point(200, 100)
+          position: new Point(200, 100),
+          count: 30
         };
 
         childB = {
           name: 'test',
           color: Color.green,
-          position: new Point(100, 100)
+          position: new Point(100, 100),
+          count: 40
         };
       });
 
@@ -110,6 +113,18 @@ describe('lively.merger >> 3-way-merger', () => {
         
         mergeObjects(base, childA, childB, callback);
         expect(method).to.have.been.called;
+      });
+
+      it('detects a conflict for simple key-value pairs', () => {
+        const result = mergeObjects(base, childA, childB);
+
+        expect(result.mergeConflicts.length).to.equal(1);
+
+        const mergeConflict = result.mergeConflicts[0];
+
+        expect(mergeConflict.property).to.equal('count');
+        expect(mergeConflict.a).to.equal(childA.count);
+        expect(mergeConflict.b).to.equal(childB.count);
       });
     });
   });
