@@ -23,13 +23,28 @@ class MergeConflict {
 
 let mergeConflicts = [];
 
-export function mergeObjects (o, a, b) {
+export function mergeObjectsIntoA (o, a, b) {
+  return mergeObjects(o, a, b, (properties, mergeConflicts) => {
+    Object.keys(properties).forEach(key => {
+      if (!a[key]) {
+        a[key] = properties[key];
+      }
+    });
+    return a;
+  });
+}
+
+export function mergeObjectsIntoB (o, a, b) {
+  return mergeObjectsIntoA(o, b, a);
+}
+
+export function mergeObjects (
+  o, a, b, 
+  onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
+) {
   mergeConflicts = [];
   let properties = merge(o, a, b);
-  return {
-    properties: properties,
-    mergeConflicts: mergeConflicts
-  };
+  return onMergeResult(properties, mergeConflicts);
 }
 
 function resolveSpecialProperty (o, a, b, k) {

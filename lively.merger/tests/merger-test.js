@@ -1,5 +1,8 @@
 /* global describe, it, beforeEach, afterEach */
-import { expect } from 'mocha-es6';
+import { expect, chai } from 'mocha-es6';
+import spies from 'https://jspm.dev/chai-spies';
+chai.use(spies);
+
 import { Merger } from '../merger.js';
 import { Morph, Ellipse } from 'lively.morphic';
 import { Color } from 'lively.graphics';
@@ -67,6 +70,53 @@ describe('lively.merger >> Merger', () => {
     });
   });
 
+  describe('#mergeMorphs(WithIds)Into{A|B}', () => {
+    beforeEach(() => {
+      morphA.fill = Color.red;
+      morphB.name = 'name2';
+    });
+    
+    it('mergeMorphsWithIdsIntoA returns a reference to morphA', () => {
+      expect(Merger.mergeMorphsWithIdsIntoA(morphA.id, morphB.id)).to.equal(morphA);
+    });
+
+    it('mergeMorphsWithIdsIntoB returns a reference to morphB', () => {
+      expect(Merger.mergeMorphsWithIdsIntoB(morphA.id, morphB.id)).to.equal(morphB);
+    });
+
+    it('mergeMorphsIntoA returns a reference to morphA', () => {
+      expect(Merger.mergeMorphsIntoA(morphA, morphB)).to.equal(morphA);
+    });
+
+    it('mergeMorphsIntoB returns a reference to morphB', () => {
+      expect(Merger.mergeMorphsIntoB(morphA, morphB)).to.equal(morphB);
+    });
+
+    it('mergeMorphsWithIdsIntoA alters morphA correctly', () => {
+      Merger.mergeMorphsWithIdsIntoA(morphA.id, morphB.id);
+      expect(morphA.fill).to.equal(Color.red);
+      expect(morphA.name).to.equal('name2');
+    });
+
+    it('mergeMorphsWithIdsIntoB alters morphB correctly', () => {
+      Merger.mergeMorphsWithIdsIntoB(morphA.id, morphB.id);
+      expect(morphB.fill).to.equal(Color.red);
+      expect(morphB.name).to.equal('name2');
+    });
+
+    it('mergeMorphsIntoA alters morphA correctly', () => {
+      Merger.mergeMorphsIntoA(morphA, morphB);
+      expect(morphA.fill).to.equal(Color.red);
+      expect(morphA.name).to.equal('name2');
+    });
+
+    it('mergeMorphsIntoB alters morphB correctly', () => {
+      Merger.mergeMorphsIntoB(morphA, morphB);
+      expect(morphB.fill).to.equal(Color.red);
+      expect(morphB.name).to.equal('name2');
+    });
+  });
+
   describe('#mergeMorphsWithIds', () => {
     it('detects if the morphs with the first ID is not alive', () => {
       expect(() => {
@@ -78,6 +128,14 @@ describe('lively.merger >> Merger', () => {
       expect(() => {
         Merger.mergeMorphsWithIds(morphA.id, 'morphBid');
       }).to.throw('Cannot merge morphs, morphB with id morphBid not found');
+    });
+
+    it('calls the onMergeResult callback, if given', () => {
+      const callback = (properties, mergeConflicts) => {};
+      const method = chai.spy(callback);
+      
+      Merger.mergeMorphsWithIds(morphA.id, morphB.id, callback);
+      expect(method).to.have.been.called;
     });
   });
 
@@ -112,6 +170,14 @@ describe('lively.merger >> Merger', () => {
 
       expect(merged.name).to.equal('name2');
       expect(merged.fill).to.equal(Color.red);
+    });
+
+    it('calls the onMergeResult callback, if given', () => {
+      const callback = (properties, mergeConflicts) => {};
+      const method = chai.spy(callback);
+      
+      Merger.mergeMorphs(morphA, morphB, callback);
+      expect(method).to.have.been.called;
     });
   });
 });
