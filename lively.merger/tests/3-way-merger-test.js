@@ -1,10 +1,41 @@
 /* global describe, it, beforeEach */
-import { expect } from 'mocha-es6';
-import { mergeObjects } from '../3-way-merger.js';
+import { expect, chai } from 'mocha-es6';
+import spies from 'https://jspm.dev/chai-spies';
+chai.use(spies);
+
+import { mergeObjects, mergeObjectsIntoB, mergeObjectsIntoA } from '../3-way-merger.js';
 import { Color, Point } from 'lively.graphics';
 
 describe('lively.merger >> 3-way-merger', () => {
-  describe('#merge', () => {
+  describe('#mergeObjectsInto{A|B}', () => {
+    let base, childA, childB;
+    
+    beforeEach(() => {
+      base = { a: 1 };
+      childA = { a: 1, b: 2, c: 4 };
+      childB = { a: 2, c: 5 };
+    });
+    
+    it('mergeObjectsIntoA alters the a object', () => {
+      mergeObjectsIntoA(base, childA, childB);
+      expect(childA).to.eql({ a: 1, b: 2, c: 4 });
+    });
+
+    it('mergeObjectsIntoA returns the a object', () => {
+      expect(mergeObjectsIntoA(base, childA, childB)).to.equal(childA);
+    });
+
+    it('mergeObjectsIntoB alters the b object', () => {
+      mergeObjectsIntoB(base, childA, childB);
+      expect(childB).to.eql({ a: 2, b: 2, c: 5 });
+    });
+
+    it('mergeObjectsIntoB returns the b object', () => {
+      expect(mergeObjectsIntoB(base, childA, childB)).to.equal(childB);
+    });
+  });
+  
+  describe('#mergeObjects', () => {
     describe('safety checks', () => {
       let primitiveObjects = ['test', 1, true, undefined, NaN, null];
 
@@ -71,6 +102,14 @@ describe('lively.merger >> 3-way-merger', () => {
         expect(result.properties.name).to.equal('hello there');
         expect(result.properties.color).to.equal(Color.green);
         expect(result.properties.position).to.equal(new Point(100, 100));
+      });
+
+      it('calls the onMergeConflic callback, if given', () => {
+        const callback = (properties, mergeConflicts) => {};
+        const method = chai.spy(callback);
+        
+        mergeObjects(base, childA, childB, callback);
+        expect(method).to.have.been.called;
       });
     });
   });
