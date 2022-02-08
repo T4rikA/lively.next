@@ -64,7 +64,7 @@ export async function mergeMorphs (
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);
 
-  let result = mergeObjects(
+  let result = merge(
     propertiesParentMorph,
     propertiesmorphA,
     propertiesmorphB);
