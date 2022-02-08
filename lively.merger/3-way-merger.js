@@ -7,6 +7,8 @@
  * @return {Object} Merged result
 */
 
+let mergeConflicts = [];
+
 class MergeConflict {
   constructor (property, a, b) {
     this.property = property;
@@ -21,86 +23,136 @@ class MergeConflict {
   }
 }
 
-let mergeConflicts = [];
-
-export function mergeObjectsIntoA (o, a, b) {
-  return mergeObjects(o, a, b, (properties, mergeConflicts) => {
-    Object.keys(properties).forEach(key => {
-      if (!a[key]) {
-        a[key] = properties[key];
-      }
-    });
-    return a;
-  });
+function isPropertyValueEqual (a, b, property) {
+  return (a ? a[property] : undefined) === (b ? b[property] : undefined);
 }
 
-export function mergeObjectsIntoB (o, a, b) {
-  return mergeObjectsIntoA(o, b, a);
+function isCompoundObject (obj, property) {
+  return typeof (obj ? obj[property] : undefined) === 'object';
 }
 
-export function mergeObjects (
-  o, a, b, 
-  onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
-) {
-  mergeConflicts = [];
-  let properties = merge(o, a, b);
-  return onMergeResult(properties, mergeConflicts);
+function specialPropertyResolvingNeeded (valueA, valueB) {
+  if (valueA.isColor && valueB.isColor) {
+    return true;
+  } else if (valueA.isPoint && valueB.isPoint) {
+    return true;
+  }
+
+  return false;
 }
 
-function resolveSpecialProperty (o, a, b, k) {
-  if (!o.equals(a) && !o.equals(b) && !a.equals(b)) {
-    new MergeConflict(k, a, b);
-    return o; // TODO: should be changed later when merge conflicts can be resolved
-  } else { return a.equals(o) ? b : a; }
+function resolveSpecialProperty (base, childA, childB, property) {
+  if (!base.equals(childA) && !base.equals(childB) && !childA.equals) {
+    new MergeConflict(property, childA, childB);
+    return base; // TODO: should be changed later when merge conflicts can be resolved
+  } else { return childA.equals(base) ? childB : childA; }
 }
 
-function merge (o, a, b) {
-  let isArray, k, ov, result;
-  if (typeof o !== 'object' || o === null) throw new Error('Parent must be an object');
-  if (typeof a !== 'object' || a === null) throw new Error('First child must be an object');
-  if (typeof b !== 'object' || b === null) throw new Error('Second child must be an object');
+function threeWayMerge (base, childA, childB) {
+  if (typeof base !== 'object' || base === null) throw new Error('Parent must be an object');
+  if (typeof childA !== 'object' || childA === null) throw new Error('First child must be an object');
+  if (typeof childB !== 'object' || childB === null) throw new Error('Second child must be an object');
 
-  isArray = Array.isArray(b);
-  result = isArray ? [] : {};
-  if (isArray) {
-    if (!Array.isArray(a)) a = [];
-    if (!Array.isArray(o)) o = [];
-    for (k in a) {
-      if (b.includes(a[k]) || !o.includes(a[k])) {
-        result.push(a[k]);
-      }
-    }
-
-    for (k in b) {
-      if (!a.includes(k)) {
-        result.push(b[k]);
-      } else if (typeof a[k] === 'object' && typeof b[k] === 'object') {
-        ov = o.includes(k) && typeof o[k] === 'object' ? o[k] : {};
-        result[k] = merge(ov, a[k], b[k]);
-      } else if (!a.includes(b[k])) {
-        result.push(b[k]);
-      }
-    }
+  if (Array.isArray(childB)) {
+    return mergeArrays(base, childA, childB);
   } else {
-    if (Array.isArray(a)) a = {};
-    for (k in b) if (k !== 'style') result[k] = b[k];
-    for (k in a) {
-      if (k === 'style') continue;
-      if (!a[k] in result) {
-        result[k] = a[k];
-      } else if (a[k] !== result[k]) {
-        if (a[k].isColor && result[k].isColor) {
-          result[k] = resolveSpecialProperty(o[k], a[k], b[k], k);
-        } else if (a[k].isPoint && result[k].isPoint) {
-          result[k] = resolveSpecialProperty(o[k], a[k], b[k], k);
-        } else if (typeof a[k] === 'object' && typeof (b ? b[k] : undefined) === 'object') {
-          ov = !!o && k in o && typeof o[k] === 'object' ? o[k] : {};
-          result[k] = merge(ov, a[k], b[k]);
-        } else if ((b ? b[k] : undefined) === (o ? o[k] : undefined)) {
-          result[k] = a[k];
+    return mergeObjects(base, childA, childB); 
+  }
+}
+
+function mergeObjects (base, childA, childB) {
+  let result = {};
+  
+  if (Array.isArray(childA)) {
+    childA = {};
+  }
+
+  for (let property in childB) {
+    if (property !== 'style') {
+      result[property] = childB[property];
+    }
+  }
+  
+  for (let property in childA) {
+    if (property === 'style') continue;
+
+    if (!childA[property] in result) {
+      result[property] = childA[property];
+    } else {
+      if (childA[property] !== result[property]) {
+        if (specialPropertyResolvingNeeded(childA[property], result[property])) {
+          result[property] = resolveSpecialProperty(base[property], childA[property], childB[property], property);
+        } else if (isCompoundObject(childA, property) && isCompoundObject(childB, property)) {
+          let newBase = {};
+          if (!!base && (property in base) && (typeof base[property] === 'object')) {
+            newBase = base[property];
+          } 
+          result[property] = threeWayMerge(newBase, childA[property], childB[property]);
+        } else if (isPropertyValueEqual(childB, base, property)) {
+          result[property] = childA[property];
+        } else if (base !== childA && base !== childB && childA !== childB) {
+          new MergeConflict(property, childA[property], childB[property]);
+          // TODO: change this, when we are able to handle merge conflicts
+          result[property] = childA[property];
         }
       }
     }
   }
   return result;
+}
+
+function mergeArrays (base, childA, childB) {
+  let result = [];
+  
+  if (!Array.isArray(childA)) {
+    childA = [];
+  }
+  if (!Array.isArray(base)) {
+    base = [];
+  }
+  
+  for (let index in childA) {
+    if (childB.includes(childA[index]) || !base.includes(childA[index])) {
+      result.push(childA[index]);
+    }
+  }
+
+  for (let index in childB) {
+    if (childA[index] === undefined) {
+      result.push(childB[index]);
+    } else if (isCompoundObject(childA, index) && isCompoundObject(childB, index)) {
+      let newBase = {};
+      if (base[index] !== undefined && typeof base[index] === 'object') {
+        newBase = base[index];
+      }
+      result[index] = threeWayMerge(newBase, childA[index], childB[index]);
+    } else if (!childA.includes(childB[index])) {
+      result.push(childB[index]);    
+    }
+  }
+  return result;  
+}
+
+export function merge (
+  base, childA, childB, 
+  onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
+) {
+  mergeConflicts = [];
+  let properties = threeWayMerge(base, childA, childB);
+  return onMergeResult(properties, mergeConflicts);
+}
+
+export function mergeIntoA (base, childA, childB) {
+  return merge(base, childA, childB, (properties, mergeConflicts) => {
+    Object.keys(properties).forEach(key => {
+      if (!childA[key]) {
+        childA[key] = properties[key];
+      }
+    });
+    return childA;
+  });
+}
+
+export function mergeIntoB (base, childA, childB) {
+  return mergeIntoA(base, childB, childA);
 }
