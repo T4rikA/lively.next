@@ -10,8 +10,9 @@
 let mergeConflicts = [];
 
 class MergeConflict {
-  constructor (property, a, b) {
+  constructor (property, base, a, b) {
     this.property = property;
+    this.base = base;
     this.a = a;
     this.b = b;
     this.name = 'MergeException';
@@ -43,7 +44,7 @@ function specialPropertyResolvingNeeded (valueA, valueB) {
 
 function resolveSpecialProperty (base, childA, childB, property) {
   if (!base.equals(childA) && !base.equals(childB) && !childA.equals) {
-    new MergeConflict(property, childA, childB);
+    new MergeConflict(property, base, childA, childB);
     return base; // TODO: should be changed later when merge conflicts can be resolved
   } else { return childA.equals(base) ? childB : childA; }
 }
@@ -90,8 +91,8 @@ function mergeObjects (base, childA, childB) {
           result[property] = threeWayMerge(newBase, childA[property], childB[property]);
         } else if (isPropertyValueEqual(childB, base, property)) {
           result[property] = childA[property];
-        } else if (base !== childA && base !== childB && childA !== childB) {
-          new MergeConflict(property, childA[property], childB[property]);
+        } else if (base[property] !== childA[property] && base[property] !== childB[property] && childA[property] !== childB[property]) {
+          new MergeConflict(property, base[property], childA[property], childB[property]);
           // TODO: change this, when we are able to handle merge conflicts
           result[property] = childA[property];
         }
