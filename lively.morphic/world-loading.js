@@ -314,17 +314,30 @@ export async function interactivelySaveWorld (world, options) {
         const overwriteQ = `The current version of world ${name} is not the most recent!\n` +
                        `A newer version by ${authorName} was saved on ` +
                        `${date.format(new Date(timestamp), 'yyyy-mm-dd HH:MM')}. Do you want to merge the worlds?`;
-        overwrite = await world.confirm(['Version Conflict\n', null, overwriteQ, { fontSize: 16, fontWeight: 'normal' }], { width: 600 });
+        overwrite = await world.multipleChoicePrompt(['Version Conflict\n', null, overwriteQ, { fontSize: 16, fontWeight: 'normal' }], { width: 600, choices: ['Take mine', 'Merge mine', 'Manual merge', 'Merge theirs', 'Take theirs'] });
       }
-      if (!overwrite) {
-        return null;
-      } else {
-        const result = mergeWorlds(expectedVersion, actualVersion);
-
-        // TODO Change this as soons as merging works
-        world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
-        return interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
+      let result = null;
+      switch (overwrite) {
+        case 'Take mine':
+          world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
+          result = interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
+          break;
+        case 'Merge mine':
+          // todo load the new version, merge their changes if merge conflict take mine
+          break;
+        case 'Manual merge':
+          // todo
+          break;
+        case 'Merge theirs':
+          // todo load the actual version, merge my changes if merge conflict take theirs
+          break;
+        case 'Take theirs':
+          // todo load the actual version
+          break;
+        default:
+          break;
       }
+      return result;
     }
 
     console.error(err);
