@@ -85,35 +85,37 @@ export async function mergeMorphsWithIds (
   if (!morphB) {
     throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
   }
-  return await mergeMorphs(
+  return mergeMorphs(
     morphA, 
     morphB, 
-    (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts)).catch(e => { throw e; });
-}
-
-export async function mergeMorphsWithIdsIntoA (morphAid, morphBid) {
-  return await mergeMorphsWithIds(morphAid, morphBid, (properties, mergeConflicts) => {
-    const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
-    Object.keys(properties).forEach(key => {
-      morphA[key] = properties[key];
-    });
-    return morphA;
-  });
-}
-
-export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
-  return await mergeMorphsWithIdsIntoA(morphBid, morphAid);
+    (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts)).catch(error => { throw error; });
 }
 
 export async function mergeMorphsIntoA (morphA, morphB) {
-  return await mergeMorphs(morphA, morphB, (properties, mergeConflicts) => {
+  return mergeMorphs(morphA, morphB, (properties, mergeConflicts) => {
     Object.keys(properties).forEach(key => {
       morphA[key] = properties[key];
     });
     return morphA;
-  });
+  }).catch(error => console.log(error));
 }
 
 export async function mergeMorphsIntoB (morphA, morphB) {
-  return await mergeMorphsIntoA(morphB, morphA);
+  return mergeMorphsIntoA(morphB, morphA);
+}
+
+export async function mergeMorphsWithIdsIntoA (morphAid, morphBid) {
+  const morphA = $world.submorphs.filter(morph => morph.id === morphAid)[0];
+  if (!morphA) {
+    throw new Error(`Cannot merge morphs, morphA with id ${morphAid} not found`);
+  }
+  const morphB = $world.submorphs.filter(morph => morph.id === morphBid)[0];
+  if (!morphB) {
+    throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
+  }
+  return mergeMorphsIntoA(morphA, morphB);
+}
+
+export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
+  return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
