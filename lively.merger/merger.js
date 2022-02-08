@@ -37,8 +37,7 @@ export async function getLowestCommonAncestor (morphA, morphB) {
         }
         const snapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, lowestCommit._id);
         const world = await loadMorphFromSnapshot(snapshot);
-        const morph = world.submorphs.filter(submorph => submorph.derivationIds[submorph.derivationIds.length - 2] === currentId)[0];
-        return morph;
+        return world.submorphs.filter(submorph => submorph.derivationIds[submorph.derivationIds.length - 2] === currentId)[0];
       }
     }
   }
@@ -88,7 +87,7 @@ export async function mergeMorphsWithIds (
   return mergeMorphs(
     morphA, 
     morphB, 
-    (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts)).catch(error => { throw error; });
+    (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
 }
 
 export async function mergeMorphsIntoA (morphA, morphB) {
@@ -97,7 +96,7 @@ export async function mergeMorphsIntoA (morphA, morphB) {
       morphA[key] = properties[key];
     });
     return morphA;
-  }).catch(error => console.log(error));
+  });
 }
 
 export async function mergeMorphsIntoB (morphA, morphB) {

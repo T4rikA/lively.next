@@ -119,11 +119,11 @@ describe('lively.merger >> Merger', () => {
   });
 
   describe('#mergeMorphsWithIds', () => {
-    it('detects if the morphs with the first ID is not alive', async function () {
-      expect(mergeMorphsWithIds('morphAid', 'morphBid')).to.be.rejectedWith('Cannot merge morphs, morphA with id morphAid not found');
+    it('detects if the morphs with the first ID is not alive', () => {
+      expect(mergeMorphsWithIds('morphAid', 'morphBid')).to.be.eventually.rejectedWith('Cannot merge morphs, morphA with id morphAid not found');
     });
 
-    it('detects if the morphs with the second ID is not alive', async () => {
+    it('detects if the morphs with the second ID is not alive', () => {
       expect(mergeMorphsWithIds(morphA.id, 'morphBid')).to.eventually.be.rejectedWith('Cannot merge morphs, morphB with id morphBid not found');
     });
 
@@ -137,8 +137,8 @@ describe('lively.merger >> Merger', () => {
   });
 
   describe('#mergeMorphs', () => {
-    it('detects if non-morphs are to be merged', async () => {
-      expect(mergeMorphs({}, {})).to.be.rejectedWith('Cannot merge objects that are not morphs');
+    it('detects if non-morphs are to be merged', () => {
+      expect(mergeMorphs({}, {})).to.be.eventually.rejectedWith('Cannot merge objects that are not morphs');
     });
 
     it('detects if the morphs do not have the same styleclass', () => {
@@ -146,7 +146,7 @@ describe('lively.merger >> Merger', () => {
       morphA = new Ellipse();
       morphA.openInWorld();
       
-      expect(mergeMorphs(morphA, morphB)).to.be.rejectedWith('Cannot merge morphs, styleclasses differ');
+      expect(mergeMorphs(morphA, morphB)).to.be.eventually.rejectedWith('Cannot merge morphs, styleclasses differ');
     });
 
     it('returns a morph', async () => {
