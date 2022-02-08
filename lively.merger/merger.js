@@ -118,3 +118,18 @@ export async function mergeMorphsWithIdsIntoA (morphAid, morphBid) {
 export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
   return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
+
+export async function mergeWorlds (expectedVersion, actualVersion) {
+  console.log(expectedVersion, actualVersion);
+  const expectedCommit = await MorphicDB.default.fetchCommit('world', $world.name, expectedVersion);
+  const expectedSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, expectedCommit._id);
+  const expectedWorld = await loadMorphFromSnapshot(expectedSnapshot);
+    
+  const actualCommit = await MorphicDB.default.fetchCommit('world', $world.name, actualVersion);
+  const actualSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, actualCommit._id);
+  const actualWorld = await loadMorphFromSnapshot(actualSnapshot);
+
+  console.log(expectedWorld, actualWorld);
+    
+  return null;
+}

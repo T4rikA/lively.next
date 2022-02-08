@@ -16,6 +16,7 @@ import './partsbin.js';
 import { joinPath } from 'lively.lang/string.js';
 import { reset } from './components/policy.js';
 import { part } from './components/core.js';
+import { Merger, mergeWorlds } from 'lively.merger/merger.js';
 
 export async function loadWorldFromURL (url, oldWorld, options) {
   const worldResource = url.isResource
@@ -193,7 +194,7 @@ async function setupLively2Lively (world) {
 export async function interactivelySaveWorld (world, options) {
   options = { showSaveDialog: true, useExpectedCommit: true, errorOnMissingExpectedCommit: false, confirmOverwrite: true, ...options };
 
-  const { SaveWorldDialog }= await System.import('lively.ide/studio/dialogs.cp.js');
+  const { SaveWorldDialog } = await System.import('lively.ide/studio/dialogs.cp.js');
   let name = world.name; let tags = []; let description = '';
   const oldCommit = await ensureCommitInfo(Path('metadata.commit').get(world));
   let db = options.morphicdb || MorphicDB.default;
@@ -312,12 +313,18 @@ export async function interactivelySaveWorld (world, options) {
         const { author: { name: authorName }, timestamp } = newerCommit;
         const overwriteQ = `The current version of world ${name} is not the most recent!\n` +
                        `A newer version by ${authorName} was saved on ` +
-                       `${date.format(new Date(timestamp), 'yyyy-mm-dd HH:MM')}. Overwrite?`;
+                       `${date.format(new Date(timestamp), 'yyyy-mm-dd HH:MM')}. Do you want to merge the worlds?`;
         overwrite = await world.confirm(['Version Conflict\n', null, overwriteQ, { fontSize: 16, fontWeight: 'normal' }], { width: 600 });
       }
-      if (!overwrite) return null;
-      world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
-      return interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
+      if (!overwrite) {
+        return null;
+      } else {
+        const result = mergeWorlds(expectedVersion, actualVersion);
+
+        // TODO Change this as soons as merging works
+        world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
+        return interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
+      }
     }
 
     console.error(err);
