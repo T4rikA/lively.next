@@ -1,4 +1,4 @@
-import { mergeObjects } from './3-way-merger.js';
+import { merge } from './3-way-merger.js';
 import { Morph } from 'lively.morphic';
 
 export class Merger {
@@ -80,7 +80,7 @@ export class Merger {
     let propertiesmorphB = this.propertiesFromMorph(morphB);
     let propertiesParentMorph = this.propertiesFromMorph(parentMorph);
 
-    let result = mergeObjects(
+    let result = merge(
       propertiesParentMorph,
       propertiesmorphA,
       propertiesmorphB);
