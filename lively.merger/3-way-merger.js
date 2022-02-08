@@ -23,7 +23,7 @@ class MergeConflict {
   }
 }
 
-function equalValueOfProperty (a, b, property) {
+function isPropertyValueEqual (a, b, property) {
   return (a ? a[property] : undefined) === (b ? b[property] : undefined);
 }
 
@@ -88,7 +88,7 @@ function mergeObjects (base, childA, childB) {
             newBase = base[property];
           } 
           result[property] = threeWayMerge(newBase, childA[property], childB[property]);
-        } else if (equalValueOfProperty(childB, base, property)) {
+        } else if (isPropertyValueEqual(childB, base, property)) {
           result[property] = childA[property];
         } else if (base !== childA && base !== childB && childA !== childB) {
           new MergeConflict(property, childA[property], childB[property]);
@@ -132,8 +132,6 @@ function mergeArrays (base, childA, childB) {
   }
   return result;  
 }
-
-// -------------- Interface -------------- //
 
 export function merge (
   base, childA, childB, 
