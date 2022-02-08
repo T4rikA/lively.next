@@ -23,16 +23,12 @@ class MergeConflict {
   }
 }
 
-function nullSafeEqualPropertyValue (a, b, property) {
+function equalValueOfProperty (a, b, property) {
   return (a ? a[property] : undefined) === (b ? b[property] : undefined);
 }
 
 function isCompoundObject (obj, property) {
   return typeof (obj ? obj[property] : undefined) === 'object';
-}
-
-function hasConflict (base, childA, childB) {
-  return base !== childA && base !== childB && childA !== childB;
 }
 
 function specialPropertyResolvingNeeded (valueA, valueB) {
@@ -52,19 +48,19 @@ function resolveSpecialProperty (base, childA, childB, property) {
   } else { return childA.equals(base) ? childB : childA; }
 }
 
-function merge (base, childA, childB) {
+function threeWayMerge (base, childA, childB) {
   if (typeof base !== 'object' || base === null) throw new Error('Parent must be an object');
   if (typeof childA !== 'object' || childA === null) throw new Error('First child must be an object');
   if (typeof childB !== 'object' || childB === null) throw new Error('Second child must be an object');
 
   if (Array.isArray(childB)) {
-    return _mergeArrays(base, childA, childB);
+    return mergeArrays(base, childA, childB);
   } else {
-    return _mergeObjects(base, childA, childB); 
+    return mergeObjects(base, childA, childB); 
   }
 }
 
-function _mergeObjects (base, childA, childB) {
+function mergeObjects (base, childA, childB) {
   let result = {};
   
   if (Array.isArray(childA)) {
@@ -91,10 +87,10 @@ function _mergeObjects (base, childA, childB) {
           if (!!base && (property in base) && (typeof base[property] === 'object')) {
             newBase = base[property];
           } 
-          result[property] = merge(newBase, childA[property], childB[property]);
-        } else if (nullSafeEqualPropertyValue(childB, base, property)) {
+          result[property] = threeWayMerge(newBase, childA[property], childB[property]);
+        } else if (equalValueOfProperty(childB, base, property)) {
           result[property] = childA[property];
-        } else if (hasConflict(base[property], childA[property], childB[property])) {
+        } else if (base !== childA && base !== childB && childA !== childB) {
           new MergeConflict(property, childA[property], childB[property]);
           // TODO: change this, when we are able to handle merge conflicts
           result[property] = childA[property];
@@ -105,7 +101,7 @@ function _mergeObjects (base, childA, childB) {
   return result;
 }
 
-function _mergeArrays (base, childA, childB) {
+function mergeArrays (base, childA, childB) {
   let result = [];
   
   if (!Array.isArray(childA)) {
@@ -129,7 +125,7 @@ function _mergeArrays (base, childA, childB) {
       if (base[index] !== undefined && typeof base[index] === 'object') {
         newBase = base[index];
       }
-      result[index] = merge(newBase, childA[index], childB[index]);
+      result[index] = threeWayMerge(newBase, childA[index], childB[index]);
     } else if (!childA.includes(childB[index])) {
       result.push(childB[index]);    
     }
@@ -137,17 +133,19 @@ function _mergeArrays (base, childA, childB) {
   return result;  
 }
 
-export function mergeObjects (
+// -------------- Interface -------------- //
+
+export function merge (
   base, childA, childB, 
   onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
 ) {
   mergeConflicts = [];
-  let properties = merge(base, childA, childB);
+  let properties = threeWayMerge(base, childA, childB);
   return onMergeResult(properties, mergeConflicts);
 }
 
-export function mergeObjectsIntoA (base, childA, childB) {
-  return mergeObjects(base, childA, childB, (properties, mergeConflicts) => {
+export function mergeIntoA (base, childA, childB) {
+  return merge(base, childA, childB, (properties, mergeConflicts) => {
     Object.keys(properties).forEach(key => {
       if (!childA[key]) {
         childA[key] = properties[key];
@@ -157,6 +155,6 @@ export function mergeObjectsIntoA (base, childA, childB) {
   });
 }
 
-export function mergeObjectsIntoB (base, childA, childB) {
-  return mergeObjectsIntoA(base, childB, childA);
+export function mergeIntoB (base, childA, childB) {
+  return mergeIntoA(base, childB, childA);
 }

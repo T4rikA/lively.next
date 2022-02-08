@@ -3,11 +3,11 @@ import { expect, chai } from 'mocha-es6';
 import spies from 'https://jspm.dev/chai-spies';
 chai.use(spies);
 
-import { mergeObjects, mergeObjectsIntoB, mergeObjectsIntoA } from '../3-way-merger.js';
+import { merge, mergeIntoB, mergeIntoA } from '../3-way-merger.js';
 import { Color, Point } from 'lively.graphics';
 
 describe('lively.merger >> 3-way-merger', () => {
-  describe('#mergeObjectsInto{A|B}', () => {
+  describe('#mergeInto{A|B}', () => {
     let base, childA, childB;
     
     beforeEach(() => {
@@ -16,33 +16,33 @@ describe('lively.merger >> 3-way-merger', () => {
       childB = { a: 2, c: 5 };
     });
     
-    it('mergeObjectsIntoA alters the a object', () => {
-      mergeObjectsIntoA(base, childA, childB);
+    it('mergeIntoA alters the a object', () => {
+      mergeIntoA(base, childA, childB);
       expect(childA).to.eql({ a: 1, b: 2, c: 4 });
     });
 
-    it('mergeObjectsIntoA returns the a object', () => {
-      expect(mergeObjectsIntoA(base, childA, childB)).to.equal(childA);
+    it('mergeIntoA returns the a object', () => {
+      expect(mergeIntoA(base, childA, childB)).to.equal(childA);
     });
 
-    it('mergeObjectsIntoB alters the b object', () => {
-      mergeObjectsIntoB(base, childA, childB);
+    it('mergeIntoB alters the b object', () => {
+      mergeIntoB(base, childA, childB);
       expect(childB).to.eql({ a: 2, b: 2, c: 5 });
     });
 
-    it('mergeObjectsIntoB returns the b object', () => {
-      expect(mergeObjectsIntoB(base, childA, childB)).to.equal(childB);
+    it('mergeIntoB returns the b object', () => {
+      expect(mergeIntoB(base, childA, childB)).to.equal(childB);
     });
   });
   
-  describe('#mergeObjects', () => {
+  describe('#merge', () => {
     describe('safety checks', () => {
       let primitiveObjects = ['test', 1, true, undefined, NaN, null];
 
       it('detects if the base is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            mergeObjects(obj, {}, {});
+            merge(obj, {}, {});
           }).to.throw('Parent must be an object');
         });
       });
@@ -50,7 +50,7 @@ describe('lively.merger >> 3-way-merger', () => {
       it('detects if the first child is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            mergeObjects({}, obj, {});
+            merge({}, obj, {});
           }).to.throw('First child must be an object');
         });
       });
@@ -58,7 +58,7 @@ describe('lively.merger >> 3-way-merger', () => {
       it('detects if the second child is a primitive type', () => {
         primitiveObjects.forEach(obj => {
           expect(() => {
-            mergeObjects({}, {}, obj);
+            merge({}, {}, obj);
           }).to.throw('Second child must be an object');
         });
       });
@@ -90,17 +90,17 @@ describe('lively.merger >> 3-way-merger', () => {
       });
 
       it('handles color objects correctly', () => {
-        const result = mergeObjects(base, childA, childB);
+        const result = merge(base, childA, childB);
         expect(result.properties.color).to.equal(Color.green);
       });
 
       it('handles point objects correctly', () => {
-        const result = mergeObjects(base, childA, childB);
+        const result = merge(base, childA, childB);
         expect(result.properties.position).to.equal(new Point(100, 100));
       });
 
       it('merges objects correctly, if there is no conflict', () => {
-        const result = mergeObjects(base, childA, childB);
+        const result = merge(base, childA, childB);
 
         expect(result.properties.name).to.equal('hello there');
         expect(result.properties.color).to.equal(Color.green);
@@ -111,12 +111,12 @@ describe('lively.merger >> 3-way-merger', () => {
         const callback = (properties, mergeConflicts) => {};
         const method = chai.spy(callback);
         
-        mergeObjects(base, childA, childB, callback);
+        merge(base, childA, childB, callback);
         expect(method).to.have.been.called;
       });
 
       it('detects a conflict for simple key-value pairs', () => {
-        const result = mergeObjects(base, childA, childB);
+        const result = merge(base, childA, childB);
 
         expect(result.mergeConflicts.length).to.equal(1);
 
