@@ -106,13 +106,13 @@ describe('lively.merger >> Merger', () => {
     });
 
     it('mergeMorphsIntoA alters morphA correctly', async () => {
-      await mergeMorphsIntoA(morphA.id, morphB.id);
-      expect(morphB.fill).to.equal(Color.red);
-      expect(morphB.name).to.equal('name2');
+      await mergeMorphsIntoA(morphA, morphB);
+      expect(morphA.fill).to.equal(Color.red);
+      expect(morphA.name).to.equal('name2');
     });
 
     it('mergeMorphsIntoB alters morphB correctly', async () => {
-      await mergeMorphsIntoB(morphA.id, morphB.id);
+      await mergeMorphsIntoB(morphA, morphB);
       expect(morphB.fill).to.equal(Color.red);
       expect(morphB.name).to.equal('name2');
     });
