@@ -43,7 +43,7 @@ function specialPropertyResolvingNeeded (valueA, valueB) {
 }
 
 function resolveSpecialProperty (base, childA, childB, property) {
-  if (!base.equals(childA) && !base.equals(childB) && !childA.equals) {
+  if (!base.equals(childA) && !base.equals(childB) && !childA.equals(childB)) {
     new MergeConflict(property, base, childA, childB);
     return base; // TODO: should be changed later when merge conflicts can be resolved
   } else { return childA.equals(base) ? childB : childA; }
