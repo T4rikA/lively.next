@@ -2,7 +2,7 @@ import { merge } from './3-way-merger.js';
 import { Morph, loadMorphFromSnapshot } from 'lively.morphic';
 import MorphicDB from 'lively.morphic/morphicdb/db.js';
 
-export function propertiesFromMorph (morph) {    
+export function propertiesFromMorph (morph) {
   const properties = {};
 
   Object.filter = (obj, predicate) => 
@@ -46,7 +46,7 @@ export async function getLowestCommonAncestor (morphA, morphB) {
   return new Morph();    
 }
 
-export async function mergeSubmorphs (morphA, morphB, parentMorph) {
+export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult) {
   const submorphAIds = morphA.submorphs.map(submorph => submorph.derivationIds);
   const submorphBIds = morphB.submorphs.map(submorph => submorph.derivationIds);
 
@@ -73,9 +73,11 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph) {
     const result = await merge(propertiesFromMorph(submorphParent), propertiesFromMorph(submorphA), propertiesFromMorph(submorphB));
     
     const subSubmorphResult = await mergeSubmorphs(submorphA, submorphB, submorphParent);
-    console.log('submorph result: ', subSubmorphResult);
 
-    result.submorphs = subSubmorphResult;
+    result.properties.submorphs = [];
+    subSubmorphResult.forEach(subSubmorph => {
+      result.properties.submorphs.push(onMergeResult(subSubmorph.properties, subSubmorph.mergeConflicts));
+    });
     console.log('result: ', result);
     results.push(result);
   }
@@ -108,13 +110,16 @@ export async function mergeMorphs (
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);
   
-  const submorphs = await mergeSubmorphs(morphA, morphB, parentMorph);
+  const submorphs = await mergeSubmorphs(morphA, morphB, parentMorph, onMergeResult);
 
   let result = merge(
     propertiesParentMorph,
     propertiesmorphA,
     propertiesmorphB);
-  result.submorphs = submorphs;
+  result.properties.submorphs = [];
+  submorphs.forEach(submorph => {
+    result.properties.submorphs.push(onMergeResult(submorph.properties, submorph.mergeConflicts));
+  });
   // TODO conflict resolve
   return onMergeResult(result.properties, result.mergeConflicts);
 }
