@@ -332,7 +332,7 @@ export async function interactivelySaveWorld (world, options) {
           // todo load the actual version, merge my changes if merge conflict take theirs
           break;
         case 'Take theirs':
-          // todo load the actual version
+          loadWorldFromCommit(newerCommit._id, undefined, { morphicDB: MorphicDB.default });
           break;
         default:
           break;
