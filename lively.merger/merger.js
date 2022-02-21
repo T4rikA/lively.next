@@ -69,7 +69,6 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
     const submorphA = morphA.submorphs.filter(submorph => submorph.id === pair.a)[0];
     const submorphB = morphB.submorphs.filter(submorph => submorph.id === pair.b)[0];
     const submorphParent = parentMorph.submorphs.filter(submorph => submorph.id === pair.parent)[0];
-    
     const result = await merge(propertiesFromMorph(submorphParent), propertiesFromMorph(submorphA), propertiesFromMorph(submorphB));
     
     const subSubmorphResult = await mergeSubmorphs(submorphA, submorphB, submorphParent);
@@ -95,7 +94,7 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
 export async function mergeMorphs (
   morphA, 
   morphB, 
-  onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  onMergeResult
 ) {
   if (!morphA.isMorph || !morphB.isMorph) {
     throw new Error('Cannot merge objects that are not morphs');
@@ -103,12 +102,16 @@ export async function mergeMorphs (
   if (JSON.stringify(morphA.styleClasses) !== JSON.stringify(morphB.styleClasses)) {
     throw new Error('Cannot merge morphs, styleclasses differ');
   }
-
+  
   let parentMorph = await getLowestCommonAncestor(morphA, morphB);
 
   let propertiesmorphA = propertiesFromMorph(morphA);
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);
+  
+  if (!onMergeResult) {
+    onMergeResult = (properties, mergeConflicts) => { return new parentMorph.constructor(properties); };
+  }
   
   const submorphs = await mergeSubmorphs(morphA, morphB, parentMorph, onMergeResult);
 
@@ -144,7 +147,7 @@ function findMorph (id, startMorph = $world) {
 export async function mergeMorphsWithIds (
   morphAid, 
   morphBid, 
-  onMergeResult = (properties, mergeConficts) => new Morph(properties)
+  onMergeResult
 ) {
   const morphA = findMorph(morphAid);
   if (!morphA) {
@@ -157,7 +160,7 @@ export async function mergeMorphsWithIds (
   return mergeMorphs(
     morphA, 
     morphB, 
-    (properties, mergeConflicts) => onMergeResult(properties, mergeConflicts));
+    onMergeResult);
 }
 
 export async function mergeMorphsIntoA (morphA, morphB) {
