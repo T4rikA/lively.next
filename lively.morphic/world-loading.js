@@ -322,19 +322,11 @@ export async function interactivelySaveWorld (world, options) {
           world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
           result = interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
           break;
-        case 'Merge mine':
-          // todo load the new version, merge their changes if merge conflict take mine
-          break;
-        case 'Manual merge':
-          // todo
-          break;
-        case 'Merge theirs':
-          // todo load the actual version, merge my changes if merge conflict take theirs
-          break;
         case 'Take theirs':
           loadWorldFromCommit(newerCommit._id, undefined, { morphicDB: MorphicDB.default });
           break;
         default:
+          mergeWorlds(expectedVersion, actualVersion, overwrite);
           break;
       }
       return result;

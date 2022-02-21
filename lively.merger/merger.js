@@ -120,7 +120,6 @@ export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
 }
 
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
-  console.log(expectedVersion, actualVersion);
   const expectedCommit = await MorphicDB.default.fetchCommit('world', $world.name, expectedVersion);
   const expectedSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, expectedCommit._id);
   const expectedWorld = await loadMorphFromSnapshot(expectedSnapshot);
@@ -128,9 +127,8 @@ export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
   const actualCommit = await MorphicDB.default.fetchCommit('world', $world.name, actualVersion);
   const actualSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, actualCommit._id);
   const actualWorld = await loadMorphFromSnapshot(actualSnapshot);
-
-  console.log(expectedWorld, actualWorld);
   
+  console.log(strategy);
   switch (strategy) {
     case 'Merge mine':
       // todo load the new version, merge their changes if merge conflict take mine
