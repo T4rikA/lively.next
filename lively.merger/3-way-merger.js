@@ -50,9 +50,12 @@ function resolveSpecialProperty (base, childA, childB, property) {
 }
 
 function threeWayMerge (base, childA, childB) {
-  if (typeof base !== 'object' || base === null) throw new Error('Parent must be an object');
-  if (typeof childA !== 'object' || childA === null) throw new Error('First child must be an object');
-  if (typeof childB !== 'object' || childB === null) throw new Error('Second child must be an object');
+  if (base === null) base = {};
+  if (childA === null) base = {};
+  if (childB === null) base = {};
+  if (typeof base !== 'object') throw new Error('Parent must be an object');
+  if (typeof childA !== 'object') throw new Error('First child must be an object');
+  if (typeof childB !== 'object') throw new Error('Second child must be an object');
 
   if (Array.isArray(childB)) {
     return mergeArrays(base, childA, childB);
