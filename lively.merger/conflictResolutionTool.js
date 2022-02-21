@@ -12,7 +12,7 @@ const COLOR_SCHEME = {
   BORDER: Color.rgba(97, 97, 97, 1)
 };
 
-class ConflictListItem extends Morph {
+export class ConflictListItem extends Morph {
   static get properties () {
     return {
       name: {
@@ -61,9 +61,9 @@ class ConflictListItem extends Morph {
           this.setProperty('mergeConflict', obj);
           
           this.labels.property.textString = `Property: ${obj.property}`;
-          this.labels.base.textString = `${this.labelNames.base}: ${obj.base}`;
-          this.labels.a.textString = `${this.labelNames.a}: ${obj.a}`;
-          this.labels.b.textString = `${this.labelNames.b}: ${obj.b}`;
+          this.labels.base.textString = `${this.labelNames.base}: ${obj.base.toString()}`;
+          this.labels.a.textString = `${this.labelNames.a}: ${obj.a.toString()}`;
+          this.labels.b.textString = `${this.labelNames.b}: ${obj.b.toString()}`;
         }
       }
     };
@@ -83,7 +83,7 @@ class ConflictListItem extends Morph {
       name: 'value selector dropdown',
       fontColor: this.fontColor,
       borderStyle: 'solid',
-      borderWidth: 1,
+      borderWidth: 3,
       tooltip: 'Select the value to be used in the merged version'
     });
     dropdown.dropDownLabel.fontSize = 14;
@@ -93,13 +93,15 @@ class ConflictListItem extends Morph {
   }
 
   validate () {
-    if (this.versionSelector.selectedValue) {
+    const valid = !!this.versionSelector.selectedValue;
+    
+    if (valid) {
       this.versionSelector.borderColor = Color.green;
     } else {
       this.versionSelector.borderColor = Color.red;
     }
     
-    return !!this.versionSelector.selectedValue;
+    return valid;
   }
 }
 
@@ -148,7 +150,10 @@ export class ConflictResolutionTool extends Morph {
 
   validate () {
     let result = true;
-    this.conflictListItems.forEach(listItem => result = result && listItem.validate());
+    this.conflictListItems.forEach(listItem => {
+      const tmp = listItem.validate();
+      result = result && tmp;      
+    });
     return result;
   }
 }
