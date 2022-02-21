@@ -195,14 +195,15 @@ export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
   return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
 
+async function loadWorldFromMorphicDB (version) {
+  const commit = await MorphicDB.default.fetchCommit('world', $world.name, version);
+  const snapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, commit._id);
+  return loadMorphFromSnapshot(snapshot);
+}
+
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
-  const expectedCommit = await MorphicDB.default.fetchCommit('world', $world.name, expectedVersion);
-  const expectedSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, expectedCommit._id);
-  const expectedWorld = await loadMorphFromSnapshot(expectedSnapshot);
-    
-  const actualCommit = await MorphicDB.default.fetchCommit('world', $world.name, actualVersion);
-  const actualSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, actualCommit._id);
-  const actualWorld = await loadMorphFromSnapshot(actualSnapshot);
+  const expectedWorld = await loadWorldFromMorphicDB(expectedVersion);
+  const actualWorld = await loadWorldFromMorphicDB(actualVersion);
   
   console.log(strategy);
   switch (strategy) {

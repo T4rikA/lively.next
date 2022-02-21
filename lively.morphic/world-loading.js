@@ -16,7 +16,7 @@ import './partsbin.js';
 import { joinPath } from 'lively.lang/string.js';
 import { reset } from './components/policy.js';
 import { part } from './components/core.js';
-import { Merger, mergeWorlds } from 'lively.merger/merger.js';
+import { mergeWorlds } from 'lively.merger/merger.js';
 
 export async function loadWorldFromURL (url, oldWorld, options) {
   const worldResource = url.isResource
@@ -308,25 +308,30 @@ export async function interactivelySaveWorld (world, options) {
     const [_, typeAndName, expectedVersion, actualVersion] = err.message.match(/Trying to store "([^\"]+)" on top of expected version ([^\s]+) but ref HEAD is of version ([^\s\!]+)/) || [];
     if (expectedVersion && actualVersion) {
       const [newerCommit] = await db.log(actualVersion, 1, /* includeCommits = */true);
-      let overwrite = true;
+      let strategy = null;
       if (options.confirmOverwrite) {
         const { author: { name: authorName }, timestamp } = newerCommit;
-        const overwriteQ = `The current version of world ${name} is not the most recent!\n` +
+        const strategyQ = `The current version of world ${name} is not the most recent!\n` +
                        `A newer version by ${authorName} was saved on ` +
                        `${date.format(new Date(timestamp), 'yyyy-mm-dd HH:MM')}. Do you want to merge the worlds?`;
-        overwrite = await world.multipleChoicePrompt(['Version Conflict\n', null, overwriteQ, { fontSize: 16, fontWeight: 'normal' }], { width: 600, choices: ['Take mine', 'Merge mine', 'Manual merge', 'Merge theirs', 'Take theirs'] });
+        strategy = await world.multipleChoicePrompt(['Version Conflict\n', null, strategyQ, { fontSize: 16, fontWeight: 'normal' }], { width: 600, choices: ['Take mine', 'Merge mine', 'Manual merge', 'Merge theirs', 'Take theirs'] });
       }
       let result = null;
-      switch (overwrite) {
+      switch (strategy) {
         case 'Take mine':
           world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
           result = interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
+          break;
+        case 'Merge mine':
+        case 'Manual merge':
+        case 'Merge theirs':
+          result = mergeWorlds(expectedVersion, actualVersion, strategy);
           break;
         case 'Take theirs':
           loadWorldFromCommit(newerCommit._id, undefined, { morphicDB: MorphicDB.default });
           break;
         default:
-          mergeWorlds(expectedVersion, actualVersion, overwrite);
+          // something went wrongs
           break;
       }
       return result;
