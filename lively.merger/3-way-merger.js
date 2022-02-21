@@ -32,29 +32,14 @@ function isCompoundObject (obj, property) {
   return typeof (obj ? obj[property] : undefined) === 'object';
 }
 
-function specialPropertyResolvingNeeded (valueA, valueB) {
-  if (valueA.isColor && valueB.isColor) {
-    return true;
-  } else if (valueA.isPoint && valueB.isPoint) {
-    return true;
-  }
-
-  return false;
-}
-
-function resolveSpecialProperty (base, childA, childB, property) {
-  if (!base.equals(childA) && !base.equals(childB) && !childA.equals(childB)) {
-    new MergeConflict(property, base, childA, childB);
-    return base; // TODO: should be changed later when merge conflicts can be resolved
-  } else { return childA.equals(base) ? childB : childA; }
-}
-
 function threeWayMerge (base, childA, childB) {
   if (typeof base !== 'object' || base === null) throw new Error('Parent must be an object');
   if (typeof childA !== 'object' || childA === null) throw new Error('First child must be an object');
   if (typeof childB !== 'object' || childB === null) throw new Error('Second child must be an object');
 
-  if (Array.isArray(childB)) {
+  if (typeof base.__provideMergeStrategy__ === 'function') {
+    return base.__provideMergeStrategy__(childA, childB);
+  } else if (Array.isArray(childB)) {
     return mergeArrays(base, childA, childB);
   } else {
     return mergeObjects(base, childA, childB); 
@@ -81,9 +66,7 @@ function mergeObjects (base, childA, childB) {
       result[property] = childA[property];
     } else {
       if (childA[property] !== result[property]) {
-        if (specialPropertyResolvingNeeded(childA[property], result[property])) {
-          result[property] = resolveSpecialProperty(base[property], childA[property], childB[property], property);
-        } else if (isCompoundObject(childA, property) && isCompoundObject(childB, property)) {
+        if (isCompoundObject(childA, property) && isCompoundObject(childB, property)) {
           let newBase = {};
           if (!!base && (property in base) && (typeof base[property] === 'object')) {
             newBase = base[property];
@@ -102,7 +85,7 @@ function mergeObjects (base, childA, childB) {
   return result;
 }
 
-function mergeArrays (base, childA, childB) {
+function mergeArrays (base, childA, childB) {  
   let result = [];
   
   if (!Array.isArray(childA)) {
