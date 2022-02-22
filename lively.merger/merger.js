@@ -106,6 +106,10 @@ export async function mergeMorphs (
   
   let parentMorph = await getLowestCommonAncestor(morphA, morphB);
 
+  if (typeof parentMorph.__provideMergeStrategy__ === 'function') {
+    return parentMorph.__provideMergeStrategy__(morphA, morphB);
+  }
+  
   let propertiesmorphA = propertiesFromMorph(morphA);
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);

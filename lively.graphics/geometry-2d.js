@@ -253,6 +253,11 @@ export class Point {
   __serialize__ () {
     return { __expr__: this.toString(false), bindings: { 'lively.graphics/geometry-2d.js': ['pt'] } };
   }
+
+  __provideMergeStrategy__ (childA, childB) {
+    if (childA.equals(childB)) return childA;
+    return childA.equals(this) ? childB : childA;
+  }
 }
 
 export class Rectangle {

@@ -1,4 +1,4 @@
-import { obj, promise, string, properties } from 'lively.lang';
+import { obj, arr, promise, string, properties } from 'lively.lang';
 import { Rectangle, Color } from 'lively.graphics';
 import { signal } from 'lively.bindings';
 import vdom from 'virtual-dom';
@@ -9,6 +9,8 @@ import { defaultStyle, defaultAttributes } from '../rendering/morphic-default.js
 import { Icon, Icons } from './icons.js';
 
 import { splitTextAndAttributesIntoLines } from './attributes.js';
+import { propertiesFromMorph } from 'lively.merger/merger.js';
+import { merge } from 'lively.merger/3-way-merger.js';
 
 const { h } = vdom;
 
@@ -264,6 +266,26 @@ export class Label extends Morph {
       this.changeMetaData('deserializeInfo', { recoveredTextBounds: true });
       this._cachedTextBounds = Rectangle.fromTuple(snapshot._cachedTextBounds);
     }
+  }
+
+  // TODO: check for other properties other than textAndAttributes that need a merge strategy
+  __provideMergeStrategy__ (childA, childB) {
+    let propertiesmorphA = propertiesFromMorph(childA);
+    let propertiesmorphB = propertiesFromMorph(childB);
+    let propertiesParentMorph = propertiesFromMorph(this);
+    delete propertiesmorphA.textAndAttributes;
+    delete propertiesmorphB.textAndAttributes;
+    delete propertiesParentMorph.textAndAttributes;
+    
+    const mergeResult = merge(propertiesmorphA, propertiesmorphB, propertiesParentMorph);
+    let textResult = [];
+    if (arr.equals(childA.textAndAttributes, childB.textAndAttributes)) {
+      textResult = childA.textAndAttributes;
+    } else {
+      textResult = arr.equals(childA.textAndAttributes, this.textAndAttributes) ? childB.textAndAttributes : childA.textAndAttributes;
+    }
+    mergeResult.properties.textAndAttributes = textResult; 
+    return new Label(mergeResult.properties);
   }
 
   get isLabel () { return true; }

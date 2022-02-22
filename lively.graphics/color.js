@@ -384,6 +384,11 @@ export class Color {
     };
   }
 
+  __provideMergeStrategy__ (childA, childB) {
+    if (childA.equals(childB)) return childA;
+    return childA.equals(this) ? childB : childA;
+  }
+
   toJSExpr () {
     return `Color.${this.name || this.toString()}`;
   }
