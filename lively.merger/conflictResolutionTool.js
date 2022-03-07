@@ -1,16 +1,6 @@
-import { pt, rect, Color } from 'lively.graphics';
+import { pt, rect } from 'lively.graphics';
 import { Morph, Label, TilingLayout } from 'lively.morphic';
-import { DropDownSelector } from 'lively.components/widgets.js';
-
-const CONSTANTS = {
-  WIDGET_EXTENT: pt(150, 30),
-  LIST_ITEM_OFFSET: 10,
-  LIST_ITEM_HEIGHT: 20
-};
-
-const COLOR_SCHEME = {
-  BORDER: Color.rgba(97, 97, 97, 1)
-};
+import { PropertyTree } from 'lively.ide/js/inspector/context.js';
 
 export class ConflictListItem extends Morph {
   static get properties () {
@@ -18,91 +8,96 @@ export class ConflictListItem extends Morph {
       name: {
         defaultValue: 'Merge Conflict'
       },
-      labelNames: {
-        defaultValue: {
-          base: 'Base',
-          a: 'A',
-          b: 'B'
-        }
-      },
-      ui: {
-        initialize () {
-          this.ui = {};
-          this.build();
-        }
-      },
       labels: {
-        after: ['ui', 'labelNames'],
-        initialize () {
-          this.labels = {
-            property: new Label({ textString: 'Property: ' }),
-            base: new Label({ textString: `${this.labelNames.base.toString()}: ` }),
-            a: new Label({ textString: `${this.labelNames.a.toString()}: ` }),
-            b: new Label({ textString: `${this.labelNames.b.toString()}: ` })
-          };
-
-          Object.values(this.labels).forEach(label => this.addMorph(label));
+        defaultValue: {
+          property: new Label('Property'),
+          base: new Label('Base'),
+          a: new Label('A'),
+          b: new Label('B')
         }
       },
-      versionSelector: {
-        after: [
-          'ui',
-          'labelNames',
-          'labels'
-        ],
-        initialize () {
-          this.versionSelector = this.buildVersionSelector();
-          this.addMorph(this.versionSelector);
+      trees: {
+        defaultValue: {
+          base: new PropertyTree({ treeData: {} }),
+          a: new PropertyTree({ treeData: {} }),
+          b: new PropertyTree({ treeData: {} })
         }
       },
       mergeConflict: {
-        after: ['labelNames', 'labels'],
+        after: ['labels', 'trees'],
         set (obj) {
           this.setProperty('mergeConflict', obj);
-          
+
           this.labels.property.textString = `Property: ${obj.property}`;
-          this.labels.base.textString = `${this.labelNames.base}: ${obj.base.toString()}`;
-          this.labels.a.textString = `${this.labelNames.a}: ${obj.a.toString()}`;
-          this.labels.b.textString = `${this.labelNames.b}: ${obj.b.toString()}`;
+          
+          this.trees.base.treeData = obj.base;
+          this.trees.a.treeData = obj.a;
+          this.trees.b.treeData = obj.b;
+        }
+      },
+      ui: {
+        after: ['labels', 'trees'],
+        initialize () {
+          this.ui = {};
+          this.build();
         }
       }
     };
   }
 
   build () {
-    this.extent = pt(500, CONSTANTS.LIST_ITEM_HEIGHT);
-    this.layout = new TilingLayout({
-      spacing: 50,
-      align: 'center',
-      padding: rect(5, 5, 5, 5)
-    });
+    this.extent = pt(200, 50);
+
+    this.addMorph(this.labels.property);
+    this.addMorph(this.labels.base);
+    this.addMorph(this.trees.base);
+    this.addMorph(this.labels.a);
+    this.addMorph(this.trees.a);
+    this.addMorph(this.labels.b);
+    this.addMorph(this.trees.b);
   }
 
-  buildVersionSelector () {
-    const dropdown = new DropDownSelector({
-      name: 'value selector dropdown',
-      fontColor: this.fontColor,
-      borderStyle: 'solid',
-      borderWidth: 3,
-      tooltip: 'Select the value to be used in the merged version'
-    });
-    dropdown.dropDownLabel.fontSize = 14;
-    dropdown.values = Object.values(this.labelNames);
-    dropdown.selectedValue = undefined;
-    return dropdown;
+  get isConflictListItem () {
+    return true;
+  }
+
+  constructor (mergeConflict) {
+    super();
+    this.mergeConflict = mergeConflict;
   }
 
   validate () {
-    const valid = !!this.versionSelector.selectedValue;
-    
-    if (valid) {
-      this.versionSelector.borderColor = Color.green;
-    } else {
-      this.versionSelector.borderColor = Color.red;
-    }
-    
-    return valid;
+    // TODO
+    return true;
   }
+}
+
+export function conflictResolutionPrompt (mergeConflicts) {
+  // 1. create empty dialog
+  const dialog = new Morph();
+  
+  // 2. get the content element
+  const contentElement = new Morph();
+  dialog.addMorph(contentElement);
+  
+  // 3. for each merge conflict create a conflict list item
+  // 4. append the list items to the content element
+  mergeConflicts.forEach(conflict => contentElement.addMorph(new ConflictListItem(conflict)));
+  
+  // 5. set ok button to the validate function
+  const validator = () => {
+    let result = true;
+    this.conflictListItems.forEach(listItem => {
+      const tmp = listItem.validate();
+      result = result && tmp;      
+    });
+    return result;
+  };
+  
+  // 6. set cancel button to close th dialog and return false
+
+  // 7. return the dialog
+  return dialog;
 }
 
 export class ConflictResolutionTool extends Morph {
@@ -146,14 +141,5 @@ export class ConflictResolutionTool extends Morph {
       align: 'center',
       padding: rect(5, 5, 5, 5)
     });
-  }
-
-  validate () {
-    let result = true;
-    this.conflictListItems.forEach(listItem => {
-      const tmp = listItem.validate();
-      result = result && tmp;      
-    });
-    return result;
   }
 }
