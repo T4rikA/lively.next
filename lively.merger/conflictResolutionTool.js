@@ -1,6 +1,7 @@
-import { pt, rect } from 'lively.graphics';
-import { Morph, Label, TilingLayout } from 'lively.morphic';
-import { PropertyTree } from 'lively.ide/js/inspector/context.js';
+import { pt, Color, rect } from 'lively.graphics';
+import { Morph, config, Label, TilingLayout } from 'lively.morphic';
+import { Tree } from 'lively.components';
+import { InspectionTree } from 'lively.ide/js/inspector/context.js';
 
 export class ConflictListItem extends Morph {
   static get properties () {
@@ -10,33 +11,58 @@ export class ConflictListItem extends Morph {
       },
       labels: {
         defaultValue: {
-          property: new Label('Property'),
-          base: new Label('Base'),
-          a: new Label('A'),
-          b: new Label('B')
+          property: new Label({ textString: 'Property' }),
+          base: new Label({ textString: 'Base' }),
+          a: new Label({ textString: 'A' }),
+          b: new Label({ textString: 'B' })
         }
       },
-      trees: {
+      treeStyle: {
         defaultValue: {
-          base: new PropertyTree({ treeData: {} }),
-          a: new PropertyTree({ treeData: {} }),
-          b: new PropertyTree({ treeData: {} })
+          extent: pt(200, 50),
+          draggable: false,
+          borderWidth: 1,
+          borderColor: Color.gray,
+          fontSize: 14,
+          fontFamily: config.codeEditor.defaultStyle.fontFamily
+        }
+      },
+      propertyTrees: {
+        after: ['treeStyle'],
+        defaultValue: {
+          base: new Tree({ 
+            treeData: InspectionTree.forObject(null, this), 
+            ...this.treeStyle,
+            name: 'propertyTree' 
+          }),
+          a: new Tree({ 
+            treeData: InspectionTree.forObject(null, this), 
+            ...this.treeStyle, 
+            name: 'propertyTree' 
+          }),
+          b: new Tree({ 
+            treeData: InspectionTree.forObject(null, this), 
+            ...this.treeStyle,
+            name: 'propertyTree' 
+          })
         }
       },
       mergeConflict: {
-        after: ['labels', 'trees'],
+        after: ['labels', 'propertyTrees', 'ui'],
         set (obj) {
           this.setProperty('mergeConflict', obj);
 
           this.labels.property.textString = `Property: ${obj.property}`;
-          
-          this.trees.base.treeData = obj.base;
-          this.trees.a.treeData = obj.a;
-          this.trees.b.treeData = obj.b;
+
+          this.propertyTrees.base.treeData = InspectionTree.forObject(obj.base);
+          this.propertyTrees.a.treeData = InspectionTree.forObject(obj.a);
+          this.propertyTrees.b.treeData = InspectionTree.forObject(obj.b);
+
+          Object.values(this.propertyTrees).forEach(tree => tree.makeDirty());
         }
       },
       ui: {
-        after: ['labels', 'trees'],
+        after: ['labels', 'propertyTrees'],
         initialize () {
           this.ui = {};
           this.build();
@@ -46,15 +72,38 @@ export class ConflictListItem extends Morph {
   }
 
   build () {
-    this.extent = pt(200, 50);
+    this.extent = pt(800, 90);
+    this.fill = Color.gray;
+    this.borderColor = Color.red;
+    this.borderWidth = 1;
 
-    this.addMorph(this.labels.property);
-    this.addMorph(this.labels.base);
-    this.addMorph(this.trees.base);
-    this.addMorph(this.labels.a);
-    this.addMorph(this.trees.a);
-    this.addMorph(this.labels.b);
-    this.addMorph(this.trees.b);
+    this.layout = new TilingLayout({
+      spacing: 5,
+      align: 'left',
+      padding: rect(5, 5, 5, 5)
+    });
+
+    this.submorphs = [
+      this.labels.property, 
+      {
+        name: 'base value',
+        submorphs: [
+          this.labels.base,
+          this.propertyTrees.base
+        ]  
+      }, {
+        name: 'a value',
+        submorphs: [
+          this.labels.a,
+          this.propertyTrees.a
+        ]
+      }, {
+        name: 'b value',
+        submorphs: [
+          this.labels.b,
+          this.propertyTrees.b
+        ]
+      }];
   }
 
   get isConflictListItem () {
@@ -76,7 +125,7 @@ export function conflictResolutionPrompt (mergeConflicts) {
   // 1. create empty dialog
   const dialog = new Morph();
   
-  // 2. get the content element
+  // 2. get the content element from the dialog
   const contentElement = new Morph();
   dialog.addMorph(contentElement);
   
@@ -98,48 +147,4 @@ export function conflictResolutionPrompt (mergeConflicts) {
 
   // 7. return the dialog
   return dialog;
-}
-
-export class ConflictResolutionTool extends Morph {
-  static get properties () {
-    return {
-      name: {
-        defaultValue: 'Conflict Resolution Tool'
-      },
-      conflictListItems: {
-        defaultValue: []
-      },
-      ui: {
-        initialize () {
-          this.ui = {};
-          this.build();
-        }
-      },
-      mergeConflicts: {
-        after: ['submorphs'],
-        defaultValue: [],
-        set (obj) {
-          this.setProperty('mergeConflicts', obj);
-          this.buildUiFromMergeConflicts(obj);
-        }
-      }
-    };
-  }
-
-  buildUiFromMergeConflicts (mergeConflicts) {
-    if (!mergeConflicts) return;
-
-    this.conflictListItems.forEach(listItem => listItem.abandon());
-    this.conflictListItems = mergeConflicts.map(mergeConflict => new ConflictListItem({ mergeConflict }));
-    this.conflictListItems.forEach(listItem => this.addMorph(listItem));
-  }
-
-  build () {
-    this.extent = pt(500, 600);
-    this.layout = new TilingLayout({
-      spacing: 5,
-      align: 'center',
-      padding: rect(5, 5, 5, 5)
-    });
-  }
 }
