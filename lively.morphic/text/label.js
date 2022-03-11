@@ -269,7 +269,7 @@ export class Label extends Morph {
   }
 
   // TODO: check for other properties other than textAndAttributes that need a merge strategy
-  __provideMergeStrategy__ (childA, childB) {
+  __provideMergeStrategy__ (childA, childB, onMergeResult = (properties, mergeConflicts) => { return new Label(properties); }) {
     let propertiesmorphA = propertiesFromMorph(childA);
     let propertiesmorphB = propertiesFromMorph(childB);
     let propertiesParentMorph = propertiesFromMorph(this);
@@ -285,7 +285,7 @@ export class Label extends Morph {
       textResult = arr.equals(childA.textAndAttributes, this.textAndAttributes) ? childB.textAndAttributes : childA.textAndAttributes;
     }
     mergeResult.properties.textAndAttributes = textResult; 
-    return new Label(mergeResult.properties);
+    return onMergeResult(mergeResult.properties);
   }
 
   get isLabel () { return true; }
