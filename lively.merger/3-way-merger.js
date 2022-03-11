@@ -122,11 +122,11 @@ function mergeArrays (base, childA, childB) {
 
 export function merge (
   base, childA, childB, 
-  onMergeResult = (properties, mergeConflicts) => { return { properties, mergeConflicts }; }
+  onMergeResult = (properties, mergeConflicts, childA, childB) => { return { properties, mergeConflicts }; }
 ) {
   mergeConflicts = [];
   let properties = threeWayMerge(base, childA, childB);
-  return onMergeResult(properties, mergeConflicts);
+  return onMergeResult(properties, mergeConflicts, childA, childB);
 }
 
 export function mergeIntoA (base, childA, childB) {
