@@ -16,7 +16,7 @@ import './partsbin.js';
 import { joinPath } from 'lively.lang/string.js';
 import { reset } from './components/policy.js';
 import { part } from './components/core.js';
-import { Merger, mergeWorlds } from 'lively.merger/merger.js';
+import { mergeWorlds } from 'lively.merger/merger.js';
 
 export async function loadWorldFromURL (url, oldWorld, options) {
   const worldResource = url.isResource
@@ -326,6 +326,7 @@ export async function interactivelySaveWorld (world, options) {
           loadWorldFromCommit(newerCommit._id, undefined, { morphicDB: MorphicDB.default });
           break;
         default:
+          console.log(expectedVersion, actualVersion);
           mergeWorlds(expectedVersion, actualVersion, overwrite);
           break;
       }
