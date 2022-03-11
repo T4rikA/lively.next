@@ -1,6 +1,6 @@
 import { pt, Color, rect } from 'lively.graphics';
-import { Morph, Label, TilingLayout } from 'lively.morphic';
-import { Tree, TreeData } from 'lively.components';
+import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
+import { Tree, MorphList, TreeData } from 'lively.components';
 import { DropDownSelector } from 'lively.components/widgets.js';
 
 export class ConflictListItem extends Morph {
@@ -12,18 +12,12 @@ export class ConflictListItem extends Morph {
       labels: {
         defaultValue: {
           property: new Label({ textString: 'Property' }),
-          base: new Label({ textString: 'Base' }),
           a: new Label({ textString: 'A' }),
           b: new Label({ textString: 'B' })
         }
       },
       propertyTrees: {
         defaultValue: {
-          base: new Tree({
-            treeData: new TreeData(null),
-            ...this.treeStyle,
-            name: 'propertyTree'
-          }),
           a: new Tree({
             treeData: new TreeData(null),
             ...this.treeStyle,
@@ -44,13 +38,11 @@ export class ConflictListItem extends Morph {
           if (obj) {
             this.labels.property.textString = `Property: ${obj.property}`;
 
-            this.propertyTrees.base.treeData = new TreeData(obj.base);
             this.propertyTrees.a.treeData = new TreeData(obj.a);
             this.propertyTrees.b.treeData = new TreeData(obj.b);
           } else {
             this.labels.property.textString = 'Property: ';
 
-            this.propertyTrees.base.treeData = new TreeData(null);
             this.propertyTrees.a.treeData = new TreeData(null);
             this.propertyTrees.b.treeData = new TreeData(null);
           }
@@ -78,31 +70,30 @@ export class ConflictListItem extends Morph {
   get valueGroupStyle () {
     return {
       extent: pt(200, 70),
-      layout: new TilingLayout({
+      layout: new VerticalLayout({
         spacing: 5,
-        align: 'top',
-        padding: rect(5, 5, 5, 5),
-        axis: 'column'
+        align: 'center',
+        padding: rect(5, 5, 5, 5)
       })
     };
   }
 
   build () {
-    this.extent = pt(850, 90);
+    this.extent = pt(625, 90);
     this.fill = Color.gray;
 
-    this.layout = new TilingLayout({
+    this.layout = new HorizontalLayout({
       spacing: 5,
-      align: 'left',
-      padding: rect(5, 5, 5, 5),
-      axis: 'row'
+      align: 'top',
+      padding: rect(5, 5, 5, 5)
     });
 
     this.valueSelector = new DropDownSelector({
-      selectedValue: null,
       extent: pt(160, 30),
+      borderstyle: 'solid',
+      borderwidth: 1,
+      selectedValue: undefined,
       values: [
-        this.labels.base.textString,
         this.labels.a.textString,
         this.labels.b.textString
       ]
@@ -114,13 +105,6 @@ export class ConflictListItem extends Morph {
       submorphs: [
         this.labels.property,
         this.valueSelector
-      ]
-    }, {
-      name: 'base value',
-      ...this.valueGroupStyle,
-      submorphs: [
-        this.labels.base,
-        this.propertyTrees.base
       ]
     }, {
       name: 'a value',
@@ -161,30 +145,81 @@ export class ConflictListItem extends Morph {
   }
 }
 
-export function conflictResolutionPrompt (mergeConflicts) {
-  // 1. create empty dialog
-  const dialog = new Morph();
+export class ConflictResolutionTool extends Morph {
+  static get properties () {
+    return {
+      conflictListItems: {
+        after: ['mergeConflicts'],
+        defaultValue: []
+      },
+      mergeConflicts: {
+        defaultValue: [],
+        set (arr) {
+          this.setProperty('mergeConflicts', arr);
+          this.update();
+        }
+      },
+      ui: {
+        initialize () {
+          this.ui = {};
+          this.build();
+        }
+      }
+    };
+  }
 
-  // 2. get the content element from the dialog
-  const contentElement = new Morph();
-  dialog.addMorph(contentElement);
+  constructor (props) {
+    super(props);
+    if (props.mergeConflicts) {
+      this.mergeConflicts = props.mergeConflicts;
+    }
+  }
 
-  // 3. for each merge conflict create a conflict list item
-  // 4. append the list items to the content element
-  mergeConflicts.forEach(conflict => contentElement.addMorph(new ConflictListItem(conflict)));
+  build () {
+    this.extent = pt(650, 500);
 
-  // 5. set ok button to the validate function
-  const validator = () => {
+    this.layout = new VerticalLayout({
+      spacing: 5,
+      align: 'left',
+      padding: rect(5, 5, 5, 5)
+    });
+
+    this.submorphs = [
+      this.buildConflictList(),
+      this.buildApplyButton(),
+      this.buildCancelButton()
+    ];
+  }
+
+  buildConflictList () {
+    this.conflictListItems = this.mergeConflicts.map(conflict => new ConflictListItem({ mergeConflict: conflict }));
+    const list = new MorphList({ extent: pt(650, 400), items: this.conflictListItems });
+    return list;
+  }
+
+  buildApplyButton () {
+    if (this.validate()) {
+      // merge accordingly
+      // close window      
+    } else {
+      // show error hint
+    }
+  }
+
+  buildCancelButton () {
+    // cancel everyting
+  }
+
+  validate () {
     let result = true;
     this.conflictListItems.forEach(listItem => {
       const tmp = listItem.validate();
       result = result && tmp;
     });
     return result;
-  };
+  }
+}
 
-  // 6. set cancel button to close th dialog and return false
-
-  // 7. return the dialog
-  return dialog;
+export function conflictResolutionPrompt (mergeConflicts) {
+  (new ConflictResolutionTool(mergeConflicts)).openInWorld();
 }
