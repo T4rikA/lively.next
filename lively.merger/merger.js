@@ -1,11 +1,12 @@
 import { merge } from './3-way-merger.js';
 import { Morph, loadMorphFromSnapshot } from 'lively.morphic';
 import MorphicDB from 'lively.morphic/morphicdb/db.js';
+import { conflictResolutionPrompt } from './conflictResolutionTool.js';
 
 export function propertiesFromMorph (morph) {
   const properties = {};
 
-  Object.filter = (obj, predicate) => 
+  Object.filter = (obj, predicate) =>
     Object.keys(obj)
       .filter(key => predicate(obj[key]))
       .reduce((res, key) => (res[key] = obj[key], res), {});
@@ -42,8 +43,8 @@ export async function getLowestCommonAncestor (morphA, morphB) {
       }
     }
   }
-    
-  return new Morph();    
+
+  return new Morph();
 }
 
 export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult) {
@@ -51,14 +52,14 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
   const submorphBIds = morphB.submorphs.map(submorph => submorph.derivationIds);
 
   let matching = [];
-  
+
   submorphAIds.forEach(submorphADerivationIds => {
     submorphBIds.forEach(submorphBDerivationIds => {
       if (submorphADerivationIds[0] === submorphBDerivationIds[0]) {
-        matching.push({ 
-          a: submorphADerivationIds[submorphADerivationIds.length - 1], 
-          b: submorphBDerivationIds[submorphBDerivationIds.length - 1], 
-          parent: submorphADerivationIds[0] 
+        matching.push({
+          a: submorphADerivationIds[submorphADerivationIds.length - 1],
+          b: submorphBDerivationIds[submorphBDerivationIds.length - 1],
+          parent: submorphADerivationIds[0]
         });
       }
     });
@@ -73,28 +74,28 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
     const submorphB = morphB.submorphs.filter(submorph => submorph.id === pair.b)[0];
     const submorphParent = parentMorph.submorphs.filter(submorph => submorph.id === pair.parent)[0];
     const submorphMergeResult = await merge(propertiesFromMorph(submorphParent), propertiesFromMorph(submorphA), propertiesFromMorph(submorphB));
-    
+
     const subSubmorphResult = await mergeSubmorphs(submorphA, submorphB, submorphParent, onMergeResult);
 
     let onMergeResultForPair = onMergeResult;
-    
+
     if (!onMergeResultForPair) {
       onMergeResultForPair = (properties, mergeConflicts) => { return new submorphParent.constructor(properties); };
     }
-    
+
     submorphMergeResult.properties.submorphs = subSubmorphResult.submorphs;
     submorphMergeResult.mergeConflicts.push(...subSubmorphResult.mergeConflicts);
-    
+
     result.submorphs.push(onMergeResultForPair(submorphMergeResult.properties));
     result.mergeConflicts.push(...submorphMergeResult.mergeConflicts);
   }
-  
+
   return result;
 }
 
 export async function mergeMorphs (
-  morphA, 
-  morphB, 
+  morphA,
+  morphB,
   onMergeResult
 ) {
   if (!morphA.isMorph || !morphB.isMorph) {
@@ -103,19 +104,19 @@ export async function mergeMorphs (
   if (JSON.stringify(morphA.styleClasses) !== JSON.stringify(morphB.styleClasses)) {
     throw new Error('Cannot merge morphs, styleclasses differ');
   }
-  
+
   let parentMorph = await getLowestCommonAncestor(morphA, morphB);
 
   if (typeof parentMorph.__provideMergeStrategy__ === 'function') {
     return parentMorph.__provideMergeStrategy__(morphA, morphB);
   }
-  
+
   let propertiesmorphA = propertiesFromMorph(morphA);
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);
 
   const submorphResult = await mergeSubmorphs(morphA, morphB, parentMorph, onMergeResult);
-  
+
   if (!onMergeResult) {
     onMergeResult = (properties, mergeConflicts) => { return new parentMorph.constructor(properties); };
   }
@@ -132,7 +133,7 @@ export async function mergeMorphs (
 
 function findMorph (id, startMorph = $world) {
   let result = startMorph.submorphs.filter(morph => morph.id === id);
-  
+
   if (result.length > 0) {
     return result[0];
   } else {
@@ -148,8 +149,8 @@ function findMorph (id, startMorph = $world) {
 }
 
 export async function mergeMorphsWithIds (
-  morphAid, 
-  morphBid, 
+  morphAid,
+  morphBid,
   onMergeResult
 ) {
   const morphA = findMorph(morphAid);
@@ -161,8 +162,8 @@ export async function mergeMorphsWithIds (
     throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
   }
   return mergeMorphs(
-    morphA, 
-    morphB, 
+    morphA,
+    morphB,
     onMergeResult);
 }
 
@@ -202,7 +203,13 @@ async function loadWorldFromMorphicDB (version) {
 }
 
 async function manualMergeDialog (actualWorld, expectedWorld) {
-  // todo
+  const result = await mergeMorphs(actualWorld, expectedWorld);
+  // TODO: open new window per morph, as multiple conflicts can have the same property.
+  if (result.mergeConflicts) {
+    const resolvedConflicts = await conflictResolutionPrompt(result.mergeConflicts);
+    Object.keys(resolvedConflicts).forEach(property => result.properties[property] = resolvedConflicts[property]);
+  }
+  return new expectedWorld.constructor(result.properties);
 }
 
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
@@ -225,6 +232,6 @@ export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
       result = expectedWorld;
       break;
   }
-    
+
   return result;
 }
