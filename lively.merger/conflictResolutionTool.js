@@ -1,9 +1,10 @@
 import { pt, Color, rect } from 'lively.graphics';
 import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
-import { Tree, MorphList, TreeData } from 'lively.components';
+// import { Tree, TreeData } from 'lively.components';
 import { DropDownSelector } from 'lively.components/widgets.js';
+import { connect } from 'lively.bindings';
 
-export class ConflictListItem extends Morph {
+class ConflictListItem extends Morph {
   static get properties () {
     return {
       name: {
@@ -11,23 +12,26 @@ export class ConflictListItem extends Morph {
       },
       labels: {
         defaultValue: {
-          property: new Label({ textString: 'Property' }),
+          property: new Label({ textString: 'Property: ' }),
           a: new Label({ textString: 'A' }),
           b: new Label({ textString: 'B' })
         }
       },
+      // This should be proper trees. But labels work for now.
       propertyTrees: {
         defaultValue: {
-          a: new Tree({
-            treeData: new TreeData(null),
-            ...this.treeStyle,
-            name: 'propertyTree'
-          }),
-          b: new Tree({
-            treeData: new TreeData(null),
-            ...this.treeStyle,
-            name: 'propertyTree'
-          })
+          // a: new Tree({
+          //   treeData: new TreeData(null),
+          //   ...this.treeStyle,
+          //   name: 'propertyTree'
+          // }),
+          // b: new Tree({
+          //   treeData: new TreeData(null),
+          //   ...this.treeStyle,
+          //   name: 'propertyTree'
+          // })
+          a: new Label(),
+          b: new Label()
         }
       },
       mergeConflict: {
@@ -38,16 +42,18 @@ export class ConflictListItem extends Morph {
           if (obj) {
             this.labels.property.textString = `Property: ${obj.property}`;
 
-            this.propertyTrees.a.treeData = new TreeData(obj.a);
-            this.propertyTrees.b.treeData = new TreeData(obj.b);
+            // this.propertyTrees.a.treeData = new TreeData(obj.a);
+            // this.propertyTrees.b.treeData = new TreeData(obj.b);
+            this.propertyTrees.a.textString = JSON.stringify(obj.a);
+            this.propertyTrees.b.textString = JSON.stringify(obj.b);
           } else {
             this.labels.property.textString = 'Property: ';
 
-            this.propertyTrees.a.treeData = new TreeData(null);
-            this.propertyTrees.b.treeData = new TreeData(null);
+            // this.propertyTrees.a.treeData = new TreeData(null);
+            // this.propertyTrees.b.treeData = new TreeData(null);
+            this.propertyTrees.a.textString = '';
+            this.propertyTrees.b.textString = '';
           }
-
-          Object.values(this.propertyTrees).forEach(tree => tree.makeDirty());
         }
       },
       ui: {
@@ -58,6 +64,14 @@ export class ConflictListItem extends Morph {
         }
       }
     };
+  }
+
+  get isListItem () {
+    return true;
+  }
+
+  get string () {
+    return '';
   }
 
   get treeStyle () {
@@ -76,6 +90,14 @@ export class ConflictListItem extends Morph {
         padding: rect(5, 5, 5, 5)
       })
     };
+  }
+
+  get property () {
+    return this.mergeConflict.property();
+  }
+
+  get selectedValue () {
+    return this.valueSelector.selectedValue === this.labels.a.textString ? this.mergeConflict.a : this.mergeConflict.b;
   }
 
   build () {
@@ -123,13 +145,11 @@ export class ConflictListItem extends Morph {
     }];
   }
 
-  get isConflictListItem () {
-    return true;
-  }
-
   constructor (args) {
     super(args);
-    this.mergeConflict = args.mergeConflict;
+    if (args.mergeConflict) {
+      this.mergeConflict = args.mergeConflict;
+    }
   }
 
   validate () {
@@ -156,10 +176,20 @@ export class ConflictResolutionTool extends Morph {
         defaultValue: [],
         set (arr) {
           this.setProperty('mergeConflicts', arr);
-          this.update();
+
+          this.updateConflictListItems(arr);
+
+          const list = this.get('conflict list');
+          if (list) {
+            list.submorphs = this.conflictListItems;
+          }
         }
       },
+      resultCallback: {
+        defaultValue: (result, err) => { console.log(result, err); }
+      },
       ui: {
+        after: ['conflictListItems'],
         initialize () {
           this.ui = {};
           this.build();
@@ -173,6 +203,9 @@ export class ConflictResolutionTool extends Morph {
     if (props.mergeConflicts) {
       this.mergeConflicts = props.mergeConflicts;
     }
+    if (props.resultCallback) {
+      this.resultCallback = props.resultCallback;
+    }
   }
 
   build () {
@@ -185,29 +218,51 @@ export class ConflictResolutionTool extends Morph {
     });
 
     this.submorphs = [
-      this.buildConflictList(),
-      this.buildApplyButton(),
-      this.buildCancelButton()
+      {
+        layout: new VerticalLayout({ spacing: 5, direction: 'top' }),
+        name: 'conflict list',
+        submorph: this.conflictListItems
+      }, {
+        layout: new HorizontalLayout({ spacing: 5, direction: 'centered' }),
+        submorphs: [
+          { type: 'button', name: 'ok button', label: 'OK' },
+          { type: 'button', name: 'cancel button', label: 'Cancel' }
+        ]
+      }
     ];
   }
 
-  buildConflictList () {
-    this.conflictListItems = this.mergeConflicts.map(conflict => new ConflictListItem({ mergeConflict: conflict }));
-    const list = new MorphList({ extent: pt(650, 400), items: this.conflictListItems });
-    return list;
+  updateConflictListItems (conflicts) {
+    this.conflictListItems.forEach(listItem => listItem.abandon());
+    this.conflictListItems = conflicts.map(conflict => new ConflictListItem({ mergeConflict: conflict }));
   }
 
-  buildApplyButton () {
+  onLoad () {
+    connect(this.get('ok button'), 'fire', this, 'apply');
+    connect(this.get('cancel button'), 'fire', this, 'cancel');
+  }
+
+  apply () {
     if (this.validate()) {
-      // merge accordingly
-      // close window      
+      const results = this.getResultsFromListItems();
+      this.resultCallback(results);
+      if (this.owner && this.owner.isWindow) {
+        this.owner.close();
+      }
     } else {
-      // show error hint
+      if (this.owner && this.owner.isWindow) {
+        this.owner.setStatusMessage('Not all conflicts have been resolved.');
+      } else {
+        $world.setStatusMessage('Not all conflicts have been resolved');
+      }
     }
   }
 
-  buildCancelButton () {
-    // cancel everyting
+  cancel () {
+    this.resultCallback(null, 'Manual merge aborted');
+    if (this.owner && this.owner.isWindow) {
+      this.owner.close();
+    }
   }
 
   validate () {
@@ -218,8 +273,27 @@ export class ConflictResolutionTool extends Morph {
     });
     return result;
   }
+
+  getResultsFromListItems () {
+    const results = {};
+    this.conflictListItems.forEach(listItem => {
+      results[listItem.propery] = listItem.selectedValue;
+    });
+    return results;
+  }
 }
 
-export function conflictResolutionPrompt (mergeConflicts) {
-  (new ConflictResolutionTool(mergeConflicts)).openInWorld();
+export async function conflictResolutionPrompt (mergeConflicts) {
+  return new Promise(function (resolve, reject) {
+    (new ConflictResolutionTool({
+      mergeConflicts: mergeConflicts,
+      resultCallback: (result, err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      }
+    })).openInWindow();
+  });
 }
