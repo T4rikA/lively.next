@@ -148,7 +148,7 @@ class ConflictListItem extends Morph {
   }
 }
 
-export class ConflictResolutionTool extends Morph {
+class ConflictResolutionTool extends Morph {
   static get properties () {
     return {
       conflictListItems: {

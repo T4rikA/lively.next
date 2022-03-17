@@ -1,7 +1,6 @@
 import { merge } from './3-way-merger.js';
 import { Morph, loadMorphFromSnapshot } from 'lively.morphic';
 import MorphicDB from 'lively.morphic/morphicdb/db.js';
-import { conflictResolutionPrompt } from './conflictResolutionTool.js';
 
 export function propertiesFromMorph (morph) {
   const properties = {};
@@ -203,14 +202,17 @@ async function loadWorldFromMorphicDB (version) {
   return loadMorphFromSnapshot(snapshot);
 }
 
-async function manualMergeDialog (actualWorld, expectedWorld) {
-  return mergeMorphs(actualWorld, expectedWorld, (properties, conflicts, constructor) => {
+export async function manualMergeDialog (morphA, morphB) {
+  const conflictResolutionModule = await System.import('lively.merger/conflictResolutionTool.js');
+  const conflictResolutionPrompt = conflictResolutionModule.conflictResolutionPrompt;
+
+  return mergeMorphs(morphA, morphB, async (properties, conflicts, constructor) => {
     if (conflicts) {
       const resolvedConflicts = await conflictResolutionPrompt(conflicts);
       Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
     }
     return new constructor(properties);
-  });  
+  });
 }
 
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
