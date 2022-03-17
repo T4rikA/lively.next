@@ -57,38 +57,50 @@ function isSpecialMorph (morph) {
   else return false;
 }
 
+function lastMatchingIndex (array1, array2) {
+  let lastIndex = 0;
+  while (lastIndex <= array1.length) {
+    lastIndex += 1;
+    if (array1[lastIndex] !== array2[lastIndex]) {
+      return lastIndex - 1;
+    }
+  }
+  return lastIndex;
+}
+
 export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult) {
   const submorphAIds = morphA.submorphs.filter(submorph => !isSpecialMorph(submorph)).map(submorph => submorph.derivationIds);
   const submorphBIds = morphB.submorphs.filter(submorph => !isSpecialMorph(submorph)).map(submorph => submorph.derivationIds);
   let matching = [];
-
   submorphAIds.forEach(submorphADerivationIds => {
     let foundInB = false;
+    // submorph in both morphs
     submorphBIds.forEach(submorphBDerivationIds => {
       if (submorphADerivationIds[0] === submorphBDerivationIds[0]) {
         matching.push({
           a: submorphADerivationIds[submorphADerivationIds.length - 1],
           b: submorphBDerivationIds[submorphBDerivationIds.length - 1],
-          parent: submorphADerivationIds[0]
+          parent: submorphADerivationIds[lastMatchingIndex(submorphADerivationIds, submorphBDerivationIds)]
         });
         foundInB = true;
       }
     });
+    // submorph just in morph a
     if (!foundInB) {
       matching.push({
         a: submorphADerivationIds[submorphADerivationIds.length - 1],
         b: undefined,
-        parent: submorphADerivationIds[0]
+        parent: submorphADerivationIds[submorphADerivationIds.length - 1]
       });
     }
   });
-
+  // submorph just in morph b
   submorphBIds.forEach(submorphBDerivationIds => {
     if (!submorphAIds.map(ids => ids[0]).includes(submorphBDerivationIds[0])) {
       matching.push({
         a: undefined,
         b: submorphBDerivationIds[submorphBDerivationIds.length - 1],
-        parent: submorphBDerivationIds[0]
+        parent: submorphBDerivationIds[submorphBDerivationIds.length - 1]
       });
     }
   });
@@ -97,19 +109,12 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
     submorphs: [],
     mergeConflicts: []
   };
-
   for (let pair of matching) {
     const submorphA = morphA.submorphs.filter(submorph => submorph.id === pair.a)[0];
     const submorphB = morphB.submorphs.filter(submorph => submorph.id === pair.b)[0];
-    debugger;
-    // error here;
     const submorphParent = parentMorph.submorphs.filter(submorph => submorph.id === pair.parent)[0];
     let submorphMergeResult = {};
     let onMergeResultForPair = onMergeResult;
-
-    if (!onMergeResultForPair) {
-      onMergeResultForPair = (properties, mergeConflicts, morphA, morphB) => { return new submorphParent.constructor(properties); };
-    }
 
     if (!submorphA && submorphB && pair.b === pair.parent) {
       submorphMergeResult.properties = propertiesFromMorph(submorphB);
@@ -125,7 +130,6 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
       continue;
     } else
     if (submorphA && submorphB) {
-      debugger;
       submorphMergeResult = await merge(propertiesFromMorph(submorphParent), propertiesFromMorph(submorphA), propertiesFromMorph(submorphB));
       const subSubmorphResult = await mergeSubmorphs(submorphA, submorphB, submorphParent, onMergeResult);
       submorphMergeResult.properties.submorphs = subSubmorphResult.submorphs;
@@ -161,12 +165,8 @@ export async function mergeMorphs (
   let propertiesmorphA = propertiesFromMorph(morphA);
   let propertiesmorphB = propertiesFromMorph(morphB);
   let propertiesParentMorph = propertiesFromMorph(parentMorph);
-
   const submorphResult = await mergeSubmorphs(morphA, morphB, parentMorph, onMergeResult);
   console.log(submorphResult);
-
-  debugger;
-  const bug = parentMorph.test.test;
 
   if (!onMergeResult) {
     onMergeResult = (properties, mergeConflicts, morphA, morphB) => { return new parentMorph.constructor(properties); };
