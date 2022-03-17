@@ -1,6 +1,5 @@
 import { pt, Color, rect } from 'lively.graphics';
 import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
-// import { Tree, TreeData } from 'lively.components';
 import { DropDownSelector } from 'lively.components/widgets.js';
 import { connect } from 'lively.bindings';
 
@@ -20,16 +19,6 @@ class ConflictListItem extends Morph {
       // This should be proper trees. But labels work for now.
       propertyTrees: {
         defaultValue: {
-          // a: new Tree({
-          //   treeData: new TreeData(null),
-          //   ...this.treeStyle,
-          //   name: 'propertyTree'
-          // }),
-          // b: new Tree({
-          //   treeData: new TreeData(null),
-          //   ...this.treeStyle,
-          //   name: 'propertyTree'
-          // })
           a: new Label(),
           b: new Label()
         }
@@ -41,16 +30,10 @@ class ConflictListItem extends Morph {
 
           if (obj) {
             this.labels.property.textString = `Property: ${obj.property}`;
-
-            // this.propertyTrees.a.treeData = new TreeData(obj.a);
-            // this.propertyTrees.b.treeData = new TreeData(obj.b);
             this.propertyTrees.a.textString = JSON.stringify(obj.a);
             this.propertyTrees.b.textString = JSON.stringify(obj.b);
           } else {
             this.labels.property.textString = 'Property: ';
-
-            // this.propertyTrees.a.treeData = new TreeData(null);
-            // this.propertyTrees.b.treeData = new TreeData(null);
             this.propertyTrees.a.textString = '';
             this.propertyTrees.b.textString = '';
           }

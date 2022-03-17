@@ -80,13 +80,13 @@ export async function mergeSubmorphs (morphA, morphB, parentMorph, onMergeResult
     let onMergeResultForPair = onMergeResult;
 
     if (!onMergeResultForPair) {
-      onMergeResultForPair = (properties, mergeConflicts) => { return new submorphParent.constructor(properties); };
+      onMergeResultForPair = (properties, mergeConflicts, constructor) => { return new constructor(properties); };
     }
 
     submorphMergeResult.properties.submorphs = subSubmorphResult.submorphs;
     submorphMergeResult.mergeConflicts.push(...subSubmorphResult.mergeConflicts);
 
-    result.submorphs.push(onMergeResultForPair(submorphMergeResult.properties));
+    result.submorphs.push(onMergeResultForPair(submorphMergeResult.properties, submorphMergeResult.mergeConflicts, submorphParent.constructor));
     result.mergeConflicts.push(...submorphMergeResult.mergeConflicts);
   }
 
@@ -118,17 +118,18 @@ export async function mergeMorphs (
   const submorphResult = await mergeSubmorphs(morphA, morphB, parentMorph, onMergeResult);
 
   if (!onMergeResult) {
-    onMergeResult = (properties, mergeConflicts) => { return new parentMorph.constructor(properties); };
+    onMergeResult = (properties, mergeConflicts, constructor) => { return new constructor(properties); };
   }
 
   let mergeResult = merge(
     propertiesParentMorph,
     propertiesmorphA,
-    propertiesmorphB);
+    propertiesmorphB
+  );
   mergeResult.properties.submorphs = submorphResult.submorphs;
   mergeResult.mergeConflicts.push(...submorphResult.mergeConflicts);
-  // TODO conflict resolve
-  return onMergeResult(mergeResult.properties, mergeResult.mergeConflicts);
+
+  return onMergeResult(mergeResult.properties, mergeResult.mergeConflicts, parentMorph.constructor);
 }
 
 function findMorph (id, startMorph = $world) {
@@ -168,7 +169,7 @@ export async function mergeMorphsWithIds (
 }
 
 export async function mergeMorphsIntoA (morphA, morphB) {
-  return mergeMorphs(morphA, morphB, (properties, mergeConflicts) => {
+  return mergeMorphs(morphA, morphB, (properties, mergeConflicts, constructor) => {
     Object.keys(properties).forEach(key => {
       morphA[key] = properties[key];
     });
@@ -203,13 +204,13 @@ async function loadWorldFromMorphicDB (version) {
 }
 
 async function manualMergeDialog (actualWorld, expectedWorld) {
-  const result = await mergeMorphs(actualWorld, expectedWorld);
-  // TODO: open new window per morph, as multiple conflicts can have the same property.
-  if (result.mergeConflicts) {
-    const resolvedConflicts = await conflictResolutionPrompt(result.mergeConflicts);
-    Object.keys(resolvedConflicts).forEach(property => result.properties[property] = resolvedConflicts[property]);
-  }
-  return new expectedWorld.constructor(result.properties);
+  return mergeMorphs(actualWorld, expectedWorld, (properties, conflicts, constructor) => {
+    if (conflicts) {
+      const resolvedConflicts = await conflictResolutionPrompt(conflicts);
+      Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
+    }
+    return new constructor(properties);
+  });  
 }
 
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
