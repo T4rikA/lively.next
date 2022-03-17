@@ -3,68 +3,47 @@ import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
 import { DropDownSelector } from 'lively.components/widgets.js';
 import { connect } from 'lively.bindings';
 
-class ConflictListItem extends Morph {
+export class ConflictListItem extends Morph {
   static get properties () {
     return {
       name: {
-        defaultValue: 'Merge Conflict'
+        defaultValue: 'aConflictListItem'
       },
       labels: {
-        defaultValue: {
-          property: new Label({ textString: 'Property: ' }),
-          a: new Label({ textString: 'A' }),
-          b: new Label({ textString: 'B' })
+        initialize () {
+          this.labels = {
+            property: new Label({ textString: 'Property: ' }),
+            a: new Label({ textString: 'A' }),
+            b: new Label({ textString: 'B' })
+          };
         }
       },
-      // This should be proper trees. But labels work for now.
-      propertyTrees: {
-        defaultValue: {
-          a: new Label(),
-          b: new Label()
-        }
-      },
-      mergeConflict: {
-        after: ['labels', 'propertyTrees', 'ui'],
-        set (obj) {
-          this.setProperty('mergeConflict', obj);
-
-          if (obj) {
-            this.labels.property.textString = `Property: ${obj.property}`;
-            this.propertyTrees.a.textString = JSON.stringify(obj.a);
-            this.propertyTrees.b.textString = JSON.stringify(obj.b);
-          } else {
-            this.labels.property.textString = 'Property: ';
-            this.propertyTrees.a.textString = '';
-            this.propertyTrees.b.textString = '';
-          }
+      propertyDisplays: {
+        initialize () {
+          this.propertyDisplays = {
+            a: new Label(),
+            b: new Label()
+          };
         }
       },
       ui: {
-        after: ['labels', 'propertyTrees'],
+        after: ['labels', 'propertyDisplays'],
         initialize () {
           this.ui = {};
           this.build();
+        }
+      },
+      mergeConflict: {
+        after: ['labels', 'propertyDisplays', 'ui'],
+        set (obj) {
+          this.setProperty('mergeConflict', obj);
+          this.updateLabels();
         }
       }
     };
   }
 
-  get isListItem () {
-    return true;
-  }
-
-  get string () {
-    return '';
-  }
-
-  get treeStyle () {
-    return {
-      extent: pt(160, 30),
-      border: { width: 1, color: Color.gray }
-    };
-  }
-
-  get valueGroupStyle () {
+  buildvalueGroupStyle () {
     return {
       extent: pt(200, 70),
       layout: new VerticalLayout({
@@ -75,8 +54,8 @@ class ConflictListItem extends Morph {
     };
   }
 
-  get property () {
-    return this.mergeConflict.property();
+  get conflictProperty () {
+    return this.mergeConflict.property;
   }
 
   get selectedValue () {
@@ -84,7 +63,7 @@ class ConflictListItem extends Morph {
   }
 
   build () {
-    this.extent = pt(625, 90);
+    this.extent = pt(650, 100);
     this.fill = Color.gray;
 
     this.layout = new HorizontalLayout({
@@ -106,26 +85,38 @@ class ConflictListItem extends Morph {
 
     this.submorphs = [{
       name: 'General Information',
-      ...this.valueGroupStyle,
+      ...this.buildvalueGroupStyle(),
       submorphs: [
         this.labels.property,
         this.valueSelector
       ]
     }, {
       name: 'a value',
-      ...this.valueGroupStyle,
+      ...this.buildvalueGroupStyle(),
       submorphs: [
         this.labels.a,
-        this.propertyTrees.a
+        this.propertyDisplays.a
       ]
     }, {
       name: 'b value',
-      ...this.valueGroupStyle,
+      ...this.buildvalueGroupStyle(),
       submorphs: [
         this.labels.b,
-        this.propertyTrees.b
+        this.propertyDisplays.b
       ]
     }];
+  }
+
+  updateLabels () {
+    if (this.mergeConflict) {
+      this.labels.property.textString = `Property: ${this.mergeConflict.property}`;
+      this.propertyDisplays.a.textString = JSON.stringify(this.mergeConflict.a);
+      this.propertyDisplays.b.textString = JSON.stringify(this.mergeConflict.b);
+    } else {
+      this.labels.property.textString = 'Property: ';
+      this.propertyDisplays.a.textString = '';
+      this.propertyDisplays.b.textString = '';
+    }
   }
 
   constructor (args) {
@@ -148,19 +139,20 @@ class ConflictListItem extends Morph {
   }
 }
 
-class ConflictResolutionTool extends Morph {
+export class ConflictResolutionTool extends Morph {
   static get properties () {
     return {
       conflictListItems: {
-        after: ['mergeConflicts'],
         defaultValue: []
       },
       mergeConflicts: {
+        after: ['conflictListItems', 'ui'],
         defaultValue: [],
         set (arr) {
           this.setProperty('mergeConflicts', arr);
 
-          this.updateConflictListItems(arr);
+          this.conflictListItems.forEach(listItem => listItem.abandon());
+          this.conflictListItems = arr.map(conflict => new ConflictListItem({ mergeConflict: conflict }));
 
           const list = this.get('conflict list');
           if (list) {
@@ -175,24 +167,23 @@ class ConflictResolutionTool extends Morph {
         after: ['conflictListItems'],
         initialize () {
           this.ui = {};
-          this.build();
         }
       }
     };
   }
 
-  constructor (props) {
-    super(props);
-    if (props.mergeConflicts) {
-      this.mergeConflicts = props.mergeConflicts;
+  constructor (args) {
+    super(args);
+    if (args.mergeConflicts) {
+      this.mergeConflicts = args.mergeConflicts;
     }
-    if (props.resultCallback) {
-      this.resultCallback = props.resultCallback;
+    if (args.resultCallback) {
+      this.resultCallback = args.resultCallback;
     }
   }
 
   build () {
-    this.extent = pt(650, 500);
+    this.extent = pt(700, 600);
 
     this.layout = new VerticalLayout({
       spacing: 5,
@@ -215,11 +206,6 @@ class ConflictResolutionTool extends Morph {
     ];
   }
 
-  updateConflictListItems (conflicts) {
-    this.conflictListItems.forEach(listItem => listItem.abandon());
-    this.conflictListItems = conflicts.map(conflict => new ConflictListItem({ mergeConflict: conflict }));
-  }
-
   onLoad () {
     connect(this.get('ok button'), 'fire', this, 'apply');
     connect(this.get('cancel button'), 'fire', this, 'cancel');
@@ -229,9 +215,7 @@ class ConflictResolutionTool extends Morph {
     if (this.validate()) {
       const results = this.getResultsFromListItems();
       this.resultCallback(results);
-      if (this.owner && this.owner.isWindow) {
-        this.owner.close();
-      }
+      this.closeWindow();
     } else {
       if (this.owner && this.owner.isWindow) {
         this.owner.setStatusMessage('Not all conflicts have been resolved.');
@@ -243,6 +227,10 @@ class ConflictResolutionTool extends Morph {
 
   cancel () {
     this.resultCallback(null, 'Manual merge aborted');
+    this.closeWindow();
+  }
+
+  closeWindow () {
     if (this.owner && this.owner.isWindow) {
       this.owner.close();
     }
@@ -260,7 +248,7 @@ class ConflictResolutionTool extends Morph {
   getResultsFromListItems () {
     const results = {};
     this.conflictListItems.forEach(listItem => {
-      results[listItem.propery] = listItem.selectedValue;
+      results[listItem.conflictProperty] = listItem.selectedValue;
     });
     return results;
   }
