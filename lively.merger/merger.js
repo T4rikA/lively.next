@@ -295,7 +295,7 @@ export async function mergeWorlds (newerWorld, olderWorld, strategy) {
       olderWorld.submorphs = olderWorld.submorphs.filter(submorph => isSpecialMorph(submorph)).concat(result.submorphs);
       return olderWorld;
     case 'Manual merge':
-      result = await manualMergeDialog(actualWorld, expectedWorld, parentWorldResult, strategy);
+      result = await manualMergeDialog(olderWorld, newerWorld, parentWorldResult, strategy);
       break;
     case 'Merge theirs':
       result = await mergeSubmorphs(olderWorld, newerWorld, parentWorldResult, undefined, strategy);
