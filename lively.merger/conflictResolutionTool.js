@@ -2,6 +2,7 @@ import { pt, Color, rect } from 'lively.graphics';
 import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
 import { DropDownSelector } from 'lively.components/widgets.js';
 import { connect } from 'lively.bindings';
+import { Button } from 'lively.components';
 
 export class ConflictListItem extends Morph {
   static get properties () {
@@ -160,13 +161,19 @@ export class ConflictResolutionTool extends Morph {
           }
         }
       },
+      buttons: {
+        initialize () {
+          this.buildButtons();
+        }
+      },
       resultCallback: {
         defaultValue: (result, err) => { console.log(result, err); }
       },
       ui: {
-        after: ['conflictListItems'],
+        after: ['conflictListItems', 'buttons'],
         initialize () {
           this.ui = {};
+          this.build();
         }
       }
     };
@@ -182,6 +189,13 @@ export class ConflictResolutionTool extends Morph {
     }
   }
 
+  buildButtons () {
+    this.buttons = {
+      ok: new Button({ name: 'ok button', label: 'OK' }),
+      cancel: new Button({ name: 'cancel button', label: 'Cancel' })
+    };
+  }
+
   build () {
     this.extent = pt(700, 600);
 
@@ -195,20 +209,20 @@ export class ConflictResolutionTool extends Morph {
       {
         layout: new VerticalLayout({ spacing: 5, direction: 'top' }),
         name: 'conflict list',
-        submorph: this.conflictListItems
+        submorphs: this.conflictListItems
       }, {
         layout: new HorizontalLayout({ spacing: 5, direction: 'centered' }),
         submorphs: [
-          { type: 'button', name: 'ok button', label: 'OK' },
-          { type: 'button', name: 'cancel button', label: 'Cancel' }
+          this.buttons.ok,
+          this.buttons.cancel
         ]
       }
     ];
   }
 
   onLoad () {
-    connect(this.get('ok button'), 'fire', this, 'apply');
-    connect(this.get('cancel button'), 'fire', this, 'cancel');
+    connect(this.buttons.ok, 'fire', this, 'apply');
+    connect(this.buttons.cancel, 'fire', this, 'cancel');
   }
 
   apply () {
