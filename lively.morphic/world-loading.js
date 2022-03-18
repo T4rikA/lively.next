@@ -328,9 +328,9 @@ export async function interactivelySaveWorld (world, options) {
           break;
         default:
           const olderWorld = $world;
-          const db = MorphicDB.default;
           const newerWorld = await db.load('world', undefined, options, newerCommit._id);
           const mergedWorld = await mergeWorlds(newerWorld, olderWorld, overwrite);
+          await loadWorld(mergedWorld, undefined, { morphicDB: MorphicDB.default });
           world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
           result = interactivelySaveWorld(mergedWorld, { ...options, morphicdb: db, showSaveDialog: false });
           break;
