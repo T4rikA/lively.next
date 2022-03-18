@@ -123,7 +123,8 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
     if (parentMorphResult.foundInWorld) {
       submorphParent = parentMorph.submorphs.filter(submorph => submorph.id === pair.parent)[0];
     } else {
-      submorphParent = parentMorph.submorphs.filter(submorph => submorph.derivationIds[submorph.derivationIds.length - 2] === pair.parent)[0];
+      // TODO: check if includes is needed here or if there are special cases where this might be wrong TA 18.03.2022
+      submorphParent = parentMorph.submorphs.filter(submorph => submorph.derivationIds.includes(pair.parent))[0];
     }
 
     let submorphMergeResult = {};
@@ -157,7 +158,7 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
       if (!onMergeResultForPair) onMergeResultForPair = (properties, mergeConflicts, morphA, morphB) => { return new submorphParent.constructor(properties); };
     }
     if (submorphMergeResult.properties && submorphMergeResult.mergeConflicts) {
-      result.submorphs.push(onMergeResultForPair(submorphMergeResult.properties, submorphMergeResult.mergeConflicts, submorphA, submorphB));
+      result.submorphs.push(await onMergeResultForPair(submorphMergeResult.properties, submorphMergeResult.mergeConflicts, submorphA, submorphB));
       result.mergeConflicts.push(...submorphMergeResult.mergeConflicts);
     }
   }
@@ -270,17 +271,19 @@ export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
   return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
 
-export async function manualMergeDialog (morphA, morphB) {
+export async function manualMergeDialog (morphA, morphB, parentMorphResult, strategy) {
   const conflictResolutionModule = await System.import('lively.merger/conflictResolutionTool.js');
   const conflictResolutionPrompt = conflictResolutionModule.conflictResolutionPrompt;
 
-  return mergeMorphs(morphA, morphB, async (properties, conflicts, constructor) => {
-    if (conflicts) {
-      const resolvedConflicts = await conflictResolutionPrompt(conflicts);
+  const callback = async (properties, conflicts, a, b) => {
+    if (conflicts && conflicts.length > 0) {
+      const resolvedConflicts = await conflictResolutionPrompt(conflicts.filter(conflict => conflict.property !== 'valueOf'));
       Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
     }
-    return new constructor(properties);
-  });
+    return new a.constructor(properties);
+  };
+
+  return mergeSubmorphs(morphA, morphB, parentMorphResult, callback, strategy);
 }
 
 export async function mergeWorlds (newerWorld, olderWorld, strategy) {
@@ -289,14 +292,15 @@ export async function mergeWorlds (newerWorld, olderWorld, strategy) {
 
   switch (strategy) {
     case 'Merge mine':
-      result = await mergeSubmorphs(olderWorld, newerWorld, parentWorldResult, undefined, strategy);
+      result = await mergeSubmorphs(newerWorld, olderWorld, parentWorldResult, undefined, strategy);
       olderWorld.submorphs = olderWorld.submorphs.filter(submorph => isSpecialMorph(submorph)).concat(result.submorphs);
       return olderWorld;
     case 'Manual merge':
-      result = await manualMergeDialog(actualWorld, expectedWorld);
-      break;
+      result = await manualMergeDialog(newerWorld, olderWorld, parentWorldResult, strategy);
+      newerWorld.submorphs = newerWorld.submorphs.filter(submorph => isSpecialMorph(submorph)).concat(result.submorphs);
+      return newerWorld;
     case 'Merge theirs':
-      result = await mergeSubmorphs(olderWorld, newerWorld, parentWorldResult, undefined, strategy);
+      result = await mergeSubmorphs(newerWorld, olderWorld, parentWorldResult, undefined, strategy);
       newerWorld.submorphs = newerWorld.submorphs.filter(submorph => isSpecialMorph(submorph)).concat(result.submorphs);
       return newerWorld;
   }
