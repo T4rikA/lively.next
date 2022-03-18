@@ -270,17 +270,19 @@ export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
   return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
 
-export async function manualMergeDialog (morphA, morphB) {
+export async function manualMergeDialog (morphA, morphB, parentMorphResult, strategy) {
   const conflictResolutionModule = await System.import('lively.merger/conflictResolutionTool.js');
   const conflictResolutionPrompt = conflictResolutionModule.conflictResolutionPrompt;
 
-  return mergeMorphs(morphA, morphB, async (properties, conflicts, constructor) => {
+  const callback = async (properties, conflicts, a, b) => {
     if (conflicts) {
       const resolvedConflicts = await conflictResolutionPrompt(conflicts);
       Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
     }
-    return new constructor(properties);
-  });
+    return new a.constructor(properties);
+  };
+
+  return mergeSubmorphs(morphA, morphB, parentMorphResult, callback, strategy);
 }
 
 export async function mergeWorlds (newerWorld, olderWorld, strategy) {
@@ -293,7 +295,7 @@ export async function mergeWorlds (newerWorld, olderWorld, strategy) {
       olderWorld.submorphs = olderWorld.submorphs.filter(submorph => isSpecialMorph(submorph)).concat(result.submorphs);
       return olderWorld;
     case 'Manual merge':
-      result = await manualMergeDialog(actualWorld, expectedWorld);
+      result = await manualMergeDialog(actualWorld, expectedWorld, parentWorldResult, strategy);
       break;
     case 'Merge theirs':
       result = await mergeSubmorphs(olderWorld, newerWorld, parentWorldResult, undefined, strategy);
