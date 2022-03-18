@@ -32,7 +32,7 @@ to
         for (let i = 0; i < value.length; i += 2) {
           const attr = value[i + 1];
           if (attr && Array.isArray(attr)) { // merge multi-attributes
-            value[i + 1] = Object.assign({}, ...attr); 
+            value[i + 1] = Object.assign({}, ...attr);
           }
         }
         serialized.props.textAndAttributes = { ...textAndAttributes, value };
@@ -302,7 +302,7 @@ For now only a simple default theme...
         if (m.props.master && typeof m.props.master.value === 'string') {
           m.props.master.value = m.props.master.value.split('styleguide://style guide').join('styleguide://System');
         }
-        if (m.props.master && m.props.master.value.id) {
+        if (m.props.master && m.props.master.value && m.props.master.value.id) {
           const entry = snapshot[m.props.master.value.id];
           if (!entry.props.auto || typeof entry.props.auto.value !== 'string') return;
           entry.props.auto.value = entry.props.auto.value.split('styleguide://style guide').join('styleguide://System');
@@ -335,7 +335,7 @@ For now only a simple default theme...
       return idAndSnapshot;
     }
   },
-  
+
   {
     date: '2022-01-14',
     name: 'migrate comments browser to new components architecture and rebuild rather than save the instances',
@@ -355,9 +355,9 @@ For now only a simple default theme...
         if (snapshot[c].props.targetObj.value.id in referencesToRemove) delete snapshot[c];
       });
       referencesToRemove.forEach(k => delete snapshot[k]);
-      
+
       removeUnreachableObjects([rootId], snapshot);
-  
+
       return idAndSnapshot;
     }
   },

@@ -78,7 +78,6 @@ export async function loadWorld (newWorld, oldWorld, options = {}) {
 
   const doc = env.domEnv.document || document;
   const nativeLoadingIndicator = doc.getElementById('dom-loading-indicator');
-
   try {
     const l2lClient = l2l && await setupLively2Lively(newWorld);
 
@@ -308,6 +307,7 @@ export async function interactivelySaveWorld (world, options) {
     const [_, typeAndName, expectedVersion, actualVersion] = err.message.match(/Trying to store "([^\"]+)" on top of expected version ([^\s]+) but ref HEAD is of version ([^\s\!]+)/) || [];
     if (expectedVersion && actualVersion) {
       const [newerCommit] = await db.log(actualVersion, 1, /* includeCommits = */true);
+      const [olderCommit] = await db.log(expectedVersion, 1, /* includeCommits = */true);
       let overwrite = true;
       if (options.confirmOverwrite) {
         const { author: { name: authorName }, timestamp } = newerCommit;
@@ -323,11 +323,17 @@ export async function interactivelySaveWorld (world, options) {
           result = interactivelySaveWorld(world, { ...options, morphicdb: db, showSaveDialog: false });
           break;
         case 'Take theirs':
-          loadWorldFromCommit(newerCommit._id, undefined, { morphicDB: MorphicDB.default });
+          world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
+          result = await loadWorldFromCommit(newerCommit._id, $world, { morphicDB: MorphicDB.default });
           break;
         default:
-          console.log(expectedVersion, actualVersion);
-          mergeWorlds(expectedVersion, actualVersion, overwrite);
+          const olderWorld = $world;
+          const db = MorphicDB.default;
+          const newerWorld = await db.load('world', undefined, options, newerCommit._id);
+          const mergedWorld = await mergeWorlds(newerWorld, olderWorld, overwrite);
+          debugger;
+          world.changeMetaData('commit', obj.dissoc(newerCommit, ['preview']), /* serialize = */true, /* merge = */false);
+          result = interactivelySaveWorld(mergedWorld, { ...options, morphicdb: db, showSaveDialog: false });
           break;
       }
       return result;
