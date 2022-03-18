@@ -276,11 +276,15 @@ export async function manualMergeDialog (morphA, morphB, parentMorphResult, stra
   const conflictResolutionPrompt = conflictResolutionModule.conflictResolutionPrompt;
 
   const callback = async (properties, conflicts, a, b) => {
-    if (conflicts && conflicts.length > 0) {
-      const resolvedConflicts = await conflictResolutionPrompt(conflicts.filter(conflict => conflict.property !== 'valueOf'));
-      Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
+    if (conflicts) {
+      conflicts = conflicts.filter(conflict => conflict.property !== 'valueOf');
+      if (conflicts.length > 0) {
+        const resolvedConflicts = await conflictResolutionPrompt(conflicts);
+        Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
+      }
     }
-    return new a.constructor(properties);
+    if (a) return new a.constructor(properties);
+    else return new b.constructor(properties);
   };
 
   return mergeSubmorphs(morphA, morphB, parentMorphResult, callback, strategy);
