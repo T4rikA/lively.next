@@ -1,4 +1,4 @@
-import { pt, Color, rect } from 'lively.graphics';
+import { pt, rect, Color } from 'lively.graphics';
 import { Morph, HorizontalLayout, VerticalLayout, Label } from 'lively.morphic';
 import { DropDownSelector } from 'lively.components/widgets.js';
 import { connect } from 'lively.bindings';
@@ -46,10 +46,11 @@ export class ConflictListItem extends Morph {
 
   buildvalueGroupStyle () {
     return {
-      extent: pt(200, 70),
+      extent: pt(105, 50),
       layout: new VerticalLayout({
         spacing: 5,
-        align: 'center',
+        align: 'left',
+        axisAlign: 'center',
         padding: rect(5, 5, 5, 5)
       })
     };
@@ -64,17 +65,18 @@ export class ConflictListItem extends Morph {
   }
 
   build () {
-    this.extent = pt(650, 100);
+    this.extent = pt(340, 65);
     this.fill = Color.gray;
 
     this.layout = new HorizontalLayout({
       spacing: 5,
-      align: 'top',
+      align: 'center',
+      axisAlign: 'left',
       padding: rect(5, 5, 5, 5)
     });
 
     this.valueSelector = new DropDownSelector({
-      extent: pt(160, 30),
+      extent: pt(60, 30),
       borderstyle: 'solid',
       borderwidth: 1,
       selectedValue: undefined,
@@ -191,27 +193,51 @@ export class ConflictResolutionTool extends Morph {
 
   buildButtons () {
     this.buttons = {
-      ok: new Button({ name: 'ok button', label: 'OK' }),
-      cancel: new Button({ name: 'cancel button', label: 'Cancel' })
+      ok: new Button({
+        name: 'ok button',
+        label: 'OK',
+        extent: pt(100, 30)
+      }),
+      cancel: new Button({
+        name: 'cancel button',
+        label: 'Cancel',
+        extent: pt(100, 30)
+      })
     };
   }
 
   build () {
-    this.extent = pt(700, 600);
-
+    this.extent = pt(390, 350);
     this.layout = new VerticalLayout({
       spacing: 5,
+      padding: rect(5, 5, 5, 5),
       align: 'left',
-      padding: rect(5, 5, 5, 5)
+      axisAlign: 'center',
+      autoResize: false
     });
 
     this.submorphs = [
       {
-        layout: new VerticalLayout({ spacing: 5, direction: 'top' }),
+        extent: pt(380, 285),
+        layout: new VerticalLayout({
+          spacing: 5,
+          align: 'left',
+          axisAlign: 'center',
+          padding: rect(5, 5, 5, 5),
+          autoResize: false
+        }),
+        clipMode: 'auto',
         name: 'conflict list',
         submorphs: this.conflictListItems
       }, {
-        layout: new HorizontalLayout({ spacing: 5, direction: 'centered' }),
+        extent: pt(375, 50),
+        name: 'button bar',
+        layout: new HorizontalLayout({
+          spacing: 5,
+          align: 'center',
+          axisAlign: 'center',
+          padding: rect(5, 5, 5, 5)
+        }),
         submorphs: [
           this.buttons.ok,
           this.buttons.cancel
