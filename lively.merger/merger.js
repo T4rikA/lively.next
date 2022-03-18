@@ -60,15 +60,15 @@ function isSpecialMorph (morph) {
   return false;
 }
 
-function lastMatchingIndex (array1, array2) {
+function lastMatchingDerivationId (array1, array2) {
   let lastIndex = 0;
   while (lastIndex <= array1.length) {
     lastIndex += 1;
     if (array1[lastIndex] !== array2[lastIndex]) {
-      return lastIndex - 1;
+      return array1[lastIndex - 1];
     }
   }
-  return lastIndex;
+  return array1[lastIndex];
 }
 
 export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMergeResult, strategy) {
@@ -82,10 +82,11 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
     // submorph in both morphs
     submorphBIds.forEach(submorphBDerivationIds => {
       if (submorphADerivationIds[0] === submorphBDerivationIds[0]) {
+        debugger;
         matching.push({
           a: submorphADerivationIds[submorphADerivationIds.length - 1],
           b: submorphBDerivationIds[submorphBDerivationIds.length - 1],
-          parent: submorphADerivationIds[lastMatchingIndex(submorphADerivationIds, submorphBDerivationIds)]
+          parent: parentMorph.submorphs.filter(submorph => submorph.derivationIds.includes(lastMatchingDerivationId(submorphADerivationIds, submorphBDerivationIds)))[0].id
         });
         foundInB = true;
       }
