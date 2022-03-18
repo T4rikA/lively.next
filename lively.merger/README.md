@@ -1,24 +1,28 @@
 # lively.merger
 
-## Entry Point
+This packages implements merging of [morphs](../lively.morphic/) with common ancestry, utilizing a 3-way-merge.
 
-The entry point is the merger class. In this the different functionality for merging morphs is described.
-This falls back on the 3-way-merge class. In this the actual merge happens on object level.
-For a 3-way-merge we need 3 objects. These are compared on the basis of their keys. To merge morphs we use the propertiesAndPropertySettings method.
-So we merge only the properties of the morphs and then merge them to a new morph or overwrite the properties at one of the original morphs.
+## Entry Points
+
+The main entry point is the [merger](./merger.js). Here, the different functionality for merging morphs is described.
+To merge the morphs, we extract their properties using the `propertiesAndPropertySettings()` method. These can then be handled as normal objects and passed into the [3-way-merger](./3-way-merger.js). The resulting merged properties are then either used to create a new, merged morph, or applied to one of the input morphs to allow 'merge into' functionality
 
 ## Custom Merging
 
-To make it easier for programmers to implement their own merge strategies there is the __provideMergeStrategy__ method. If this is implemented for an object which should be merged, this method is used instead of the standard merge algorithm.
-Over it programmers can decide very freely how exactly custom objects are to be merged, of course the 3-way-merge method is nevertheless available. Thus one can adapt also afterwards individual characteristics.
+To allow programmers to implement their own merge strategies, we added the `__provideMergeStrategy__` method. If this is implemented for an object that is about to be merged, this method is used instead of the standard merge algorithm.
+
+This allows for customization where the general purpose merge might ignore semantics. Colors for example are a collection of color channel values. If a general purpose merge would be applied, the colors themselves would not be merged, but their values, which would result in a mixed color and not the color of one of the versions.
 
 ## World Merging
 
-In addition worlds can be merged, these are in lively.next also only morphs and should therefore function automatically, however one must consider some things here.
-System tools like a browser, inspector, version manager, hand, ... should not be merged. Therefore we exclude these when merging worlds. Also the world itself should not be merged but only the submorphs of the world. After that, a new world should be created containing the merged submorphs and written to the database as a new commit. Alternatively, you can choose other strategies when merging worlds, such as simply overwriting your own or other people's changes.
+As worlds in lively.next are also just morphs, they can also be merged. Corresponding hooks are set when saving worlds. However, there are still some limitations that may lead to unexpected behavior.
+
+- Worlds will only be merged when they are saved and there is a conflict with the version in the database. Here several ways of proceeding can be selected.
+- System tools like browsers, inspectors, etc. should not be merged. Accordingly, we excluded them from merging.
+- Worlds themselves should not be merged. Accordingly, the submorphs of worlds are merged and used to create a new world with them in it. This new world is then written back to the database as a new commit.
 
 ## Open ToDos:
 
-Customize the DerivationID lists
-Better Merge Conflict UI
-Merging for objects
+- Customize the DerivationID lists ()
+- Better UI for manual merging (#11)
+- Merging for objects (#46)
