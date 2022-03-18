@@ -195,6 +195,19 @@ export async function mergeMorphsWithIdsIntoB (morphAid, morphBid) {
   return mergeMorphsWithIdsIntoA(morphBid, morphAid);
 }
 
+export async function manualMergeDialog (morphA, morphB) {
+  const conflictResolutionModule = await System.import('lively.merger/conflictResolutionTool.js');
+  const conflictResolutionPrompt = conflictResolutionModule.conflictResolutionPrompt;
+
+  return mergeMorphs(morphA, morphB, async (properties, conflicts, constructor) => {
+    if (conflicts) {
+      const resolvedConflicts = await conflictResolutionPrompt(conflicts);
+      Object.keys(resolvedConflicts).forEach(property => properties[property] = resolvedConflicts[property]);
+    }
+    return new constructor(properties);
+  });
+}
+
 export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
   const expectedCommit = await MorphicDB.default.fetchCommit('world', $world.name, expectedVersion);
   const expectedSnapshot = await MorphicDB.default.fetchSnapshot(undefined, undefined, expectedCommit._id);
@@ -210,12 +223,12 @@ export async function mergeWorlds (expectedVersion, actualVersion, strategy) {
       // todo load the new version, merge their changes if merge conflict take mine
       break;
     case 'Manual merge':
-      // todo
+      result = await manualMergeDialog(actualWorld, expectedWorld);
       break;
     case 'Merge theirs':
       // todo load the actual version, merge my changes if merge conflict take theirs
       break;
   }
     
-  return expectedWorld;
+  return result;
 }
