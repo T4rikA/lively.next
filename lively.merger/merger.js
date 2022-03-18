@@ -57,7 +57,7 @@ export async function getLowestCommonAncestor (morphA, morphB) {
 
 function isSpecialMorph (morph) {
   if (morph.isHand || morph.isWindow || morph.isEpiMorph) return true;
-  else return false;
+  return false;
 }
 
 function lastMatchingIndex (array1, array2) {
@@ -235,7 +235,7 @@ export async function mergeMorphsWithIds (
   if (!morphB) {
     throw new Error(`Cannot merge morphs, morphB with id ${morphBid} not found`);
   }
-  return await mergeMorphs(
+  return mergeMorphs(
     morphA,
     morphB,
     onMergeResult, strategy);
