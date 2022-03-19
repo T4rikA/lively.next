@@ -41,7 +41,6 @@ function threeWayMerge (base, childA, childB, property = undefined) {
   if (typeof childB !== 'object') throw new Error('Second child must be an object');
 
   if (typeof base.__provideMergeStrategy__ === 'function') {
-    debugger;
     const result = base.__provideMergeStrategy__(childA, childB);
     if (result.mergeResult) return result.mergeResult;
     else {
