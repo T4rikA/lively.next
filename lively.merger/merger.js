@@ -38,7 +38,7 @@ export async function getLowestCommonAncestor (morphA, morphB) {
             }
           });
 
-          const worldIncludesId = worldSnapshot.props.derivationIds.value.includes(currentId);
+          const worldIncludesId = worldSnapshot.props.derivationIds.value[worldSnapshot.props.derivationIds.value.length - 1] === currentId;
           const submorphsIncludeId = worldSnapshot.props.submorphs.value.includes(submorph => submorph.id === currentId);
           if (worldIncludesId) {
             result.parentMorph = await loadMorphFromSnapshot(snapshot);
@@ -60,15 +60,15 @@ function isSpecialMorph (morph) {
   return false;
 }
 
-function lastMatchingIndex (array1, array2) {
+function lastMatchingDerivationId (array1, array2) {
   let lastIndex = 0;
   while (lastIndex <= array1.length) {
     lastIndex += 1;
     if (array1[lastIndex] !== array2[lastIndex]) {
-      return lastIndex - 1;
+      return array1[lastIndex - 1];
     }
   }
-  return lastIndex;
+  return array1[lastIndex];
 }
 
 export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMergeResult, strategy) {
@@ -85,7 +85,7 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
         matching.push({
           a: submorphADerivationIds[submorphADerivationIds.length - 1],
           b: submorphBDerivationIds[submorphBDerivationIds.length - 1],
-          parent: submorphADerivationIds[lastMatchingIndex(submorphADerivationIds, submorphBDerivationIds)]
+          parent: parentMorph.submorphs.filter(submorph => submorph.derivationIds.includes(lastMatchingDerivationId(submorphADerivationIds, submorphBDerivationIds)))[0].id
         });
         foundInB = true;
       }
@@ -113,8 +113,7 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
   });
 
   let result = {
-    submorphs: [],
-    mergeConflicts: []
+    submorphs: []
   };
   for (let pair of matching) {
     const submorphA = morphA.submorphs.filter(submorph => submorph.id === pair.a)[0];
@@ -154,12 +153,10 @@ export async function mergeSubmorphs (morphA, morphB, parentMorphResult, onMerge
       const subMorphParentResult = { parentMorph: submorphParent, foundInWorld: parentMorphResult.foundInWorld };
       const subSubmorphResult = await mergeSubmorphs(submorphA, submorphB, subMorphParentResult, onMergeResult, strategy);
       submorphMergeResult.properties.submorphs = subSubmorphResult.submorphs;
-      submorphMergeResult.mergeConflicts.push(...subSubmorphResult.mergeConflicts);
       if (!onMergeResultForPair) onMergeResultForPair = (properties, mergeConflicts, morphA, morphB) => { return new submorphParent.constructor(properties); };
     }
     if (submorphMergeResult.properties && submorphMergeResult.mergeConflicts) {
       result.submorphs.push(await onMergeResultForPair(submorphMergeResult.properties, submorphMergeResult.mergeConflicts, submorphA, submorphB));
-      result.mergeConflicts.push(...submorphMergeResult.mergeConflicts);
     }
   }
   return result;

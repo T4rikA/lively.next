@@ -385,8 +385,17 @@ export class Color {
   }
 
   __provideMergeStrategy__ (childA, childB) {
-    if (childA.equals(childB)) return childA;
-    return childA.equals(this) ? childB : childA;
+    let result = { mergeResult: undefined, mergeConflict: undefined };
+    if (childA.equals(childB)) {
+      result.mergeResult = childA;
+    } else if (this.equals(childA)) {
+      result.mergeResult = childB;
+    } else if (this.equals(childB)) {
+      result.mergeResult = childA;
+    } else {
+      result.mergeConflict = { property: undefined, base: this, a: childA, b: childB };
+    }
+    return result;
   }
 
   toJSExpr () {
