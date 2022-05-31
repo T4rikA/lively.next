@@ -162,10 +162,9 @@ function showLine (world, line, delay = 3000) {
 
 export function show (target, loop = false) {
   const world = MorphicEnv.default().world;
-
   if (target === null || target === undefined) target = String(target);
   if (target.isMorph) return showRect(target.world(), target.globalBounds().translatedBy(world.scroll.negated()), loop);
-  if (target.isPoint) return showRect(world, new Rectangle(target.x - 5, target.y - 5, 10, 10));
+  if (target.isPoint) return showRect(world, new Rectangle(target.x - 10, target.y - 10, 20, 20));
   if (target.isLine) return showLine(world, target);
   if (target.isRectangle) return showRect(world, target);
   if (typeof Element !== 'undefined' && target instanceof Element) { return showRect(world, Rectangle.fromElement(target)); }

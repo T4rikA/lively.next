@@ -3065,6 +3065,10 @@ export class PathPoint {
     this.path.makeDirty();
   }
 
+  show (loop) { return $world.execCommand('show morph', { morph: this.position.addPt(this.path.position), loop }); }
+
+  showControlPoint (controlPoint, loop) { return $world.execCommand('show morph', { morph: controlPoint.addPt(this.path.position).addPt(this.position), loop }); }
+
   moveNextControlPoint (delta) {
     this.moveControlPoint('next', delta);
   }
@@ -3543,6 +3547,23 @@ export class Path extends Morph {
     if (!this._pathNode) return pt(0, 0);
     const { x, y } = this._pathNode.getPointAtLength(this._pathNode.getTotalLength() * n) || pt(0, 0);
     return pt(x, y);
+  }
+
+  get convexHull () {
+    // search for non overlapping connection
+    let p = new Path({ origin: this.origin, position: this.position });
+    this.vertices.forEach(vertex => {
+      p.addVertex(new PathPoint(p, { isSmooth: false, position: vertex.position }));
+
+      let points = vertex.controlPoints;
+      if (!points.next.equals(pt(0, 0))) {
+        p.addVertex(new PathPoint(p, { isSmooth: false, position: points.next.addPt(vertex.position) }));
+      }
+      if (!points.previous.equals(pt(0, 0))) {
+        p.addVertex(new PathPoint(p, { isSmooth: false, position: points.previous.addPt(vertex.position) }));
+      }
+    });
+    return p;
   }
 
   get borderOptions () {
