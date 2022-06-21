@@ -110,7 +110,6 @@ export class SVGMorph extends Morph {
   }
 
   initializeSVGPath (svgPath) {
-    const oldPath = this.svgPath;
     this.svgPath = svgPath;
     const ratio = svgPath.getAttribute('height').replace(/\D/g, '') / svgPath.getAttribute('width').replace(/\D/g, '');
     this.width = this.height * ratio;
