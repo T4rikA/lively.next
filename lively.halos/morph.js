@@ -2117,6 +2117,10 @@ export default class Halo extends Morph {
     this.target.onHaloDoubleMouseDown(evt);
   }
 
+  onDoubleMouseDown (evt) {
+    this.target.onHaloDoubleMouseDown(evt);
+  }
+
   onContextMenu (evt) {
     Promise
       .resolve($world.defaultMenuItems(this.target)).then(items => this.target.openMenu(items, evt))
