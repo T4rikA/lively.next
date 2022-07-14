@@ -4,7 +4,7 @@ import { Morph } from 'lively.morphic';
 import vdom from 'virtual-dom';
 import { pt, Color } from 'lively.graphics';
 const { diff, patch, create: createElement } = vdom;
-import { SVG } from './svg.js';
+import { SVG, Point } from './svg.js';
 import { string, obj, arr, num, promise, tree, Path as PropertyPath } from 'lively.lang';
 
 class SVGVNode {
@@ -214,8 +214,21 @@ export class SVGMorph extends Morph {
     lastDelta = lastDelta || { x: 0, y: 0 };
     let deltaX = evt.state.absDragDelta.x - lastDelta.x;
     let deltaY = evt.state.absDragDelta.y - lastDelta.y;
-    SVG(marker).dmove(deltaX, -deltaY);
-    this.changeSVGToControlPoint(marker, pt(deltaX, -deltaY));
+    let point = new Point(deltaX, deltaY);
+    console.log(point);
+    let current = this.target;
+    /* while (current != this.svgPath) {
+      const transformation = SVG(current.parentNode).transform();
+      console.log(transformation);
+      point = point.transform(transformation);
+      console.log(point);
+      current = current.parentNode;
+    } */
+    if (!point.transform) debugger;
+    point = point.transform(SVG(this.target.parentNode).transform());
+    console.log(point);
+    SVG(marker).dmove(point.x, point.y);
+    this.changeSVGToControlPoint(marker, pt(point.x, point.y));
   }
 
   onDragEnd (evt) {
