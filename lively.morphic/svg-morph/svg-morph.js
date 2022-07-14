@@ -5,7 +5,7 @@ import vdom from 'virtual-dom';
 import { pt, Color } from 'lively.graphics';
 const { diff, patch, create: createElement } = vdom;
 import { SVG } from './svg.js';
-import { string, obj, arr, num, promise, tree, Path as PropertyPath } from 'lively.lang';
+import { Path as PropertyPath } from 'lively.lang';
 
 class SVGVNode {
   constructor (morph, renderer) {
@@ -166,6 +166,8 @@ export class SVGMorph extends Morph {
     this.removeAllControlPoints();
 
     const tar = SVG(this.target);
+    $world.svgSelect(tar);
+
     const targetPath = SVG(this.target).array();
 
     for (let i = 0; i < targetPath.length; i++) {
@@ -178,7 +180,6 @@ export class SVGMorph extends Morph {
           tar.after(defaultPoint);
           defaultPoint.front();
       }
-      let lastElement = element;
     }
   }
 
@@ -229,7 +230,7 @@ export class SVGMorph extends Morph {
     const cssClass = new PropertyPath('attributes.class.value').get(controlPoint);
     if (cssClass && cssClass.includes('control-point')) {
       const [_, n, ctrlN] = cssClass.match(/control-point-([0-9]+)(?:-control-([0-9]+))?$/);
-      if (SVG(this.target).type == 'path') {
+      if (SVG(this.target).type === 'path') {
         const selectedPath = SVG(this.target);
         let selectedPoint = selectedPath.array()[n];
         selectedPath.array()[n][selectedPoint.length - 2] += moveDelta.x;
