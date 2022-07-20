@@ -111,7 +111,7 @@ export class SVGMorph extends Morph {
   }
 
   selectElement (target) {
-    if (target.id.startsWith('control-point') || this._controlPointDrag) return;
+    if (target.id.startsWith('control-point') || target.id.startsWith('bezier-point') || this._controlPointDrag) return;
     let wasSelected = false;
     if (this.target && this.target.id === target.id && this.target.selected) wasSelected = true;
 
@@ -190,11 +190,31 @@ export class SVGMorph extends Morph {
         let controlPoint = this.createControlPointAt(i, x, y);
         tar.after(controlPoint);
         controlPoint.front();
+        if (element[0] === 'C') {
+          for (let j = 0; j < 2; j++) {
+            const x1 = element[1 + (2 * j)];
+            const y1 = element[2 + (2 * j)];
+            let bezierPoint = this.createBezierPointAt(i, j, x1, y1);
+            bezierPoint.addClass('bezier-point'); // TODO: find better idea instead of adding this class too
+            tar.after(bezierPoint);
+            bezierPoint.front();
+          }
+        }
       }
     }
   }
 
+  createBezierPointAt (id, number, x, y) {
+    const idString = 'bezier-point-' + id + '-' + number;
+    return this.createPointAt(idString, 'control-point', x, y, 'red');
+  }
+
   createControlPointAt (id, x, y) {
+    const idString = 'control-point-' + id;
+    return this.createPointAt(idString, 'control-point', x, y, 'yellow');
+  }
+
+  createPointAt (idString, pointClass, x, y, color) {
     const t = SVG(this.svgPath);
     let point = t.circle();
 
@@ -202,12 +222,12 @@ export class SVGMorph extends Morph {
       cx: x,
       cy: y,
       r: 5,
-      id: 'control-point-' + id,
-      fill: 'yellow',
+      id: idString,
+      fill: color
       cursor: 'move'
     });
-    point.addClass('control-point');
-    point.addClass('control-point-' + id);
+    point.addClass(pointClass);
+    point.addClass(idString);
 
     return point;
   }
@@ -275,23 +295,33 @@ export class SVGMorph extends Morph {
 
   changeSVGToControlPoint (controlPoint, moveDelta) {
     const cssClass = new PropertyPath('attributes.class.value').get(controlPoint);
-    if (cssClass && cssClass.includes('control-point')) {
+    const selectedPath = SVG(this.target);
+
+    if (cssClass && cssClass.includes('bezier-point')) {
+      const [_, n, ctrlN] = cssClass.match(/bezier-point-([0-9]+)-([0-9]+)/);
+      let selectedPoint = selectedPath.array()[n];
+      selectedPoint[1 + (2 * ctrlN)] += moveDelta.x;
+      selectedPoint[2 + (2 * ctrlN)] += moveDelta.y;
+      this.target.setAttribute('d', selectedPath.array().copyWithin());
+      this.updatePathBBox(selectedPath);
+    } else if (cssClass && cssClass.includes('control-point')) {
       const [_, n, ctrlN] = cssClass.match(/control-point-([0-9]+)(?:-control-([0-9]+))?$/);
-      if (SVG(this.target).type === 'path') {
-        const selectedPath = SVG(this.target);
-        let selectedPoint = selectedPath.array()[n];
-        selectedPath.array()[n][selectedPoint.length - 2] += moveDelta.x;
-        selectedPath.array()[n][selectedPoint.length - 1] += moveDelta.y;
-        this.target.setAttribute('d', selectedPath.array().copyWithin());
-        let bbox = SVG(this.svgPath).findOne('rect.my-path-selection');
-        bbox.attr({
-          x: selectedPath.bbox().x,
-          y: selectedPath.bbox().y,
-          width: selectedPath.bbox().width,
-          height: selectedPath.bbox().height
-        });
-      }
+      let selectedPoint = selectedPath.array()[n];
+      selectedPath.array()[n][selectedPoint.length - 2] += moveDelta.x;
+      selectedPath.array()[n][selectedPoint.length - 1] += moveDelta.y;
+      this.target.setAttribute('d', selectedPath.array().copyWithin());
+      this.updatePathBBox(selectedPath);
     }
+  }
+
+  updatePathBBox (selectedPath) {
+    let bbox = SVG(this.svgPath).findOne('rect.my-path-selection');
+    bbox.attr({
+      x: selectedPath.bbox().x,
+      y: selectedPath.bbox().y,
+      width: selectedPath.bbox().width,
+      height: selectedPath.bbox().height
+    });
   }
 
   removeAllControlPoints () {
