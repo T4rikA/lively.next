@@ -7,6 +7,7 @@ const { diff, patch, create: createElement } = vdom;
 import { SVG } from './svg.js';
 import { Path as PropertyPath } from 'lively.lang';
 import { connect, disconnect } from 'lively.bindings';
+import { URL } from 'esm://cache/npm:@jspm/core@2.0.0-beta.24/nodelibs/url';
 
 class SVGVNode {
   constructor (morph, renderer) {
@@ -59,8 +60,7 @@ export class SVGMorph extends Morph {
         set (extent) {
           this.setProperty('extent', extent);
           if (this.svgPath) {
-            this.svgPath.setAttribute('height', extent.y);
-            this.svgPath.setAttribute('width', extent.x);
+            this.svgPath.setAttribute('viewBox', `0 0 ${extent.x} ${extent.y}`);
           }
         }
       },
@@ -236,6 +236,10 @@ export class SVGMorph extends Morph {
       if (this._controlPointDrag) this.controlPointDrag(point);
       else this.pathDrag(point);
       this.createSVGSelectionBox();
+      const bbox = this.svgPath.getBBox();
+      const w = bbox.width + point.x > bbox.width ? bbox.width + point.x : bbox.width;
+      const h = bbox.height - point.y > bbox.height ? bbox.height - point.y : bbox.height;
+      this.extent = pt(w + 200, h + 200);
     } else {
       super.onDrag(evt);
     }
@@ -344,6 +348,28 @@ export class SVGMorph extends Morph {
     this.removePathSelection();
     this.removeAllControlPoints();
     this.editMode = false;
+  }
+
+  exportSVG () {
+    this.svgPath.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    let svgData = this.svgPath.parentElement.outerHTML;
+    let preface = '<?xml version="1.0" standalone="no"?>\r\n';
+    let svgBlob = new Blob([preface, svgData], { type: 'image/svg+xml;charset=utf-8' });
+    let svgUrl = URL.createObjectURL(svgBlob);
+    let downloadLink = document.createElement('a');
+    downloadLink.href = svgUrl;
+    downloadLink.download = 'export.svg';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
+
+  menuItems () {
+    return [
+      ['export SVG', () => this.exportSVG()],
+      { isDivider: true },
+      ...super.menuItems()
+    ];
   }
 
   __additionally_serialize__ (snapshot, ref, pool, addFn) {
