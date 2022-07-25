@@ -261,7 +261,7 @@ export class SVGMorph extends Morph {
       cy: y,
       r: 3,
       id: idString,
-      fill: color
+      fill: color,
       cursor: 'move'
     });
     point.addClass(pointClass);
