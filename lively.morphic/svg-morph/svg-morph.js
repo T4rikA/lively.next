@@ -108,19 +108,6 @@ export class SVGMorph extends Morph {
     }
   }
 
-  removeSVGSelection () {
-    const t = SVG(this.svgPath);
-    if (t.findOne('rect.my-svg-selection'))t.findOne('rect.my-svg-selection').remove();
-  }
-
-  removePathSelection () {
-    const t = SVG(this.svgPath);
-    if (this.target && t.findOne('rect.my-path-selection')) {
-      t.findOne('rect.my-path-selection').remove();
-      this.target.selected = false;
-    }
-  }
-
   selectElement (target) {
     if (target.id.startsWith('control-point') || target.id.startsWith('bezier-point') || this._controlPointDrag) return;
     let wasSelected = false;
@@ -186,6 +173,8 @@ export class SVGMorph extends Morph {
 
   get isSVGMorph () { return true; }
 
+  // ======= Control- and Bezierpoints for SVG paths ===========
+
   getControlPoints () {
     this.removeAllControlPoints();
     this.removeAllBezierLines();
@@ -209,19 +198,18 @@ export class SVGMorph extends Morph {
             const y1 = element[2 + (2 * j)];
 
             let bezierLine;
-            if (j == 0) {
+            if (j === 0) {
               let prevElement = targetPath[i - 1]; // first in array will never be 'C'
               const prevX = prevElement[prevElement.length - 2];
               const prevY = prevElement[prevElement.length - 1];
               bezierLine = this.createBezierLine(i, j, prevX, prevY, x1, y1);
             } else {
-              bezierLine = this.createBezierLine(i, j, x1, y1, x, y, i);
+              bezierLine = this.createBezierLine(i, j, x1, y1, x, y);
             }
             tar.after(bezierLine);
             bezierLine.front();
 
             let bezierPoint = this.createBezierPointAt(i, j, x1, y1);
-            bezierPoint.addClass('bezier-point'); // TODO: find better idea instead of adding this class too
             tar.after(bezierPoint);
             bezierPoint.front();
           }
@@ -250,14 +238,13 @@ export class SVGMorph extends Morph {
   createBezierPointAt (id, number, x, y) {
     const idString = 'bezier-point-' + id + '-' + number;
     let point = this.createPointAt(idString, 'control-point', x, y, 'red');
-    point.isBezierPoint = true;
+    point.addClass('bezier-point');
     return point;
   }
 
   createControlPointAt (id, x, y) {
     const idString = 'control-point-' + id;
     let point = this.createPointAt(idString, 'control-point', x, y, 'yellow');
-    point.isControlPoint = true;
     return point;
   }
 
@@ -278,6 +265,8 @@ export class SVGMorph extends Morph {
 
     return point;
   }
+
+  // === drag handling ===
 
   onDragStart (evt) {
     const { domEvt: { target } } = evt;
@@ -302,7 +291,7 @@ export class SVGMorph extends Morph {
       const point = this.convertPointToCTMOf(this.target, evt.state.dragDelta.x, evt.state.dragDelta.y);
       if (this._controlPointDrag) this.controlPointDrag(point);
       else this.pathDrag(point);
-      this.createSVGSelectionBox();
+      this.updateSVGSelectionBox();
     } else {
       super.onDrag(evt);
     }
@@ -344,35 +333,33 @@ export class SVGMorph extends Morph {
   changeSVGToControlPoint (controlPoint, moveDelta) {
     const cssClass = new PropertyPath('attributes.class.value').get(controlPoint);
     const selectedPath = SVG(this.target);
+    const selectedPathArray = selectedPath.array();
     let selectedPoint;
     let _, n, ctrlN;
 
     if (this.isBezierPoint(controlPoint)) {
       [_, n, ctrlN] = cssClass.match(/bezier-point-([0-9]+)-([0-9]+)/);
 
-      selectedPoint = selectedPath.array()[n];
+      selectedPoint = selectedPathArray[n];
       selectedPoint[1 + (2 * ctrlN)] += moveDelta.x;
       selectedPoint[2 + (2 * ctrlN)] += moveDelta.y;
-      this.target.setAttribute('d', selectedPath.array().copyWithin());
+      this.target.setAttribute('d', selectedPathArray.copyWithin());
       this.updatePathBBox(selectedPath);
     } else if (cssClass && cssClass.includes('control-point')) {
       [_, n, ctrlN] = cssClass.match(/control-point-([0-9]+)(?:-control-([0-9]+))?$/);
 
-      selectedPoint = selectedPath.array()[n];
-      selectedPath.array()[n][selectedPoint.length - 2] += moveDelta.x;
-      selectedPath.array()[n][selectedPoint.length - 1] += moveDelta.y;
-      this.target.setAttribute('d', selectedPath.array().copyWithin());
+      selectedPoint = selectedPathArray[n];
+      selectedPathArray[n][selectedPoint.length - 2] += moveDelta.x;
+      selectedPathArray[n][selectedPoint.length - 1] += moveDelta.y;
+      this.target.setAttribute('d', selectedPathArray.copyWithin());
       this.updatePathBBox(selectedPath);
     }
     n = parseInt(n);
     ctrlN = parseInt(ctrlN);
+    // TODO: would like to do that in another method since it is not part of changing the SVG but don't know yet how and where
     if (this.isControlPointWithBezierLine(selectedPath, n)) {
       this.updateBezierLine(controlPoint, n, ctrlN, moveDelta);
     }
-  }
-
-  isBezierPoint (controlPoint) {
-    return controlPoint.id.startsWith('bezier-point');
   }
 
   updateBezierLine (controlPoint, id, number, moveDelta) {
@@ -400,10 +387,14 @@ export class SVGMorph extends Morph {
     }
   }
 
+  isBezierPoint (controlPoint) {
+    return controlPoint.id.startsWith('bezier-point');
+  }
+
   isControlPointWithBezierLine (selectedPath, n) {
     const selectedPoint = selectedPath.array()[n];
     const nextPoint = selectedPath.array()[n + 1];
-    return this.showBezierPoints && (selectedPoint[0] == 'C' || (nextPoint && nextPoint[0] == 'C'));
+    return this.showBezierPoints && (selectedPoint[0] === 'C' || (nextPoint && nextPoint[0] === 'C'));
   }
 
   updatePathBBox (selectedPath) {
@@ -415,6 +406,20 @@ export class SVGMorph extends Morph {
       height: selectedPath.bbox().height
     });
   }
+
+  updateSVGSelectionBox () {
+    let svg = SVG(this.svgPath);
+    let bbox = svg.findOne('rect.my-svg-selection');
+
+    bbox.attr({
+      x: svg.bbox().x,
+      y: svg.bbox().y,
+      width: svg.bbox().width,
+      height: svg.bbox().height
+    });
+  }
+
+  //= == clear SVG from custom elements ===
 
   removeAllControlPoints () {
     let oldControlPoints = document.getElementsByClassName('control-point');
@@ -428,6 +433,27 @@ export class SVGMorph extends Morph {
     while (oldBezierLines.length > 0) {
       oldBezierLines[0].remove();
     }
+  }
+
+  removeSVGSelection () {
+    const t = SVG(this.svgPath);
+    if (t.findOne('rect.my-svg-selection'))t.findOne('rect.my-svg-selection').remove();
+  }
+
+  removePathSelection () {
+    const t = SVG(this.svgPath);
+    if (this.target && t.findOne('rect.my-path-selection')) {
+      t.findOne('rect.my-path-selection').remove();
+      this.target.selected = false;
+    }
+  }
+
+  removeAllSelections () {
+    this.removeSVGSelection();
+    this.removePathSelection();
+    this.removeAllControlPoints();
+    this.removeAllBezierLines();
+    this.editMode = false;
   }
 
   render (renderer) {
