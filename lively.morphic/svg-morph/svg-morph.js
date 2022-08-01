@@ -7,7 +7,6 @@ const { diff, patch, create: createElement } = vdom;
 import { SVG } from './svg.js';
 import { Path as PropertyPath } from 'lively.lang';
 import { connect, disconnect } from 'lively.bindings';
-import { URL } from 'esm://cache/npm:@jspm/core@2.0.0-beta.24/nodelibs/url';
 
 class SVGVNode {
   constructor (morph, renderer) {
@@ -81,13 +80,17 @@ export class SVGMorph extends Morph {
   }
 
   initialize () {
-    connect($world, 'showHaloFor', this, 'removeAllSelections');
     this.setSVGPath();
+    connect($world, 'showHaloFor', this, 'deactivateEditMode');
   }
 
   abandon (remvoe) {
     super.abandon();
-    disconnect($world, 'showHaloFor', this, 'removeAllSelections');
+    disconnect($world, 'showHaloFor', this, 'deactivateEditMode');
+  }
+
+  deactivateEditMode () {
+    if (this.editMode) this.toggleEditMode();
   }
 
   toggleEditMode () {
@@ -95,14 +98,19 @@ export class SVGMorph extends Morph {
     if (this.editMode) {
       this.createSVGSelectionBox();
     } else {
-      this.removeAllSelections();
-      if (this.target) this.target.selected = false;
+      this.removeSVGSelection();
+      if (this.target) {
+        this.removePathSelection();
+      }
+      this.removeAllControlPoints();
+      this.removeAllBezierLines();
+      this.target.selected = false;
     }
   }
 
   removeSVGSelection () {
     const t = SVG(this.svgPath);
-    if (t.findOne('rect.my-svg-selection')) t.findOne('rect.my-svg-selection').remove();
+    if (t.findOne('rect.my-svg-selection'))t.findOne('rect.my-svg-selection').remove();
   }
 
   removePathSelection () {
@@ -122,6 +130,7 @@ export class SVGMorph extends Morph {
     this.target = target;
     this.target.selected = true;
     this.removeAllControlPoints();
+    this.removeAllBezierLines();
     this.createSelectionBoxAndPointsFor(target);
   }
 
@@ -226,7 +235,7 @@ export class SVGMorph extends Morph {
 
     const line = t.line(startX, startY, endX, endY);
     line.id = 'bezier-line-' + id + '-' + number;
-    line.stroke({ color: number == 0 ? 'grey' : 'black', width: 2, linecap: 'round' });
+    line.stroke({ color: 'grey', width: 2, linecap: 'round' });
     line.addClass('bezier-line');
     line.addClass('bezier-line-' + id + '-' + number);
     line.attr({
@@ -281,6 +290,7 @@ export class SVGMorph extends Morph {
         this._pathDrag = { targetPath: target };
       } else {
         this.removeAllControlPoints();
+        this.removeAllBezierLines();
         this.removePathSelection();
         if (this.target) this.target.selected = false;
       }
@@ -375,12 +385,11 @@ export class SVGMorph extends Morph {
         startPoints = [{ id: id, index: 3, number: 1, moveStart: true }];
       }
     } else {
-      startPoints = [{ id: id, index: selectedPath[id].length - 2, number: 0, moveStart: true }];
+      startPoints = [{ id: id + 1, index: selectedPath[id].length - 2, number: 0, moveStart: true }];
       if (selectedPath[id][0] === 'C') startPoints.push({ id: id, index: 2, number: 1, moveStart: false });
     }
     const t = SVG(this.svgPath);
     for (let i = 0; i < startPoints.length; i++) {
-      // debugger;
       let line = t.findOne('line.bezier-line-' + startPoints[i].id + '-' + startPoints[i].number);
       const lineArray = line.array();
       if (startPoints[i].moveStart) {
@@ -462,6 +471,7 @@ export class SVGMorph extends Morph {
     this.removeSVGSelection();
     this.removePathSelection();
     this.removeAllControlPoints();
+    this.removeAllBezierLines();
     this.editMode = false;
   }
 
@@ -491,6 +501,5 @@ export class SVGMorph extends Morph {
   __after_deserialize__ (snapshot, objRef, pool) {
     super.__after_deserialize__(snapshot, objRef, pool);
     this.createDomNode(this.svgPathString);
-    connect($world, 'showHaloFor', this, 'removeAllSelections');
   }
 }
