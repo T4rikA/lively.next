@@ -57,11 +57,14 @@ export class SVGMorph extends Morph {
       extent: {
         defaultValue: pt(800, 450),
         set (extent) {
-          this.setProperty('extent', extent);
           if (this.svgPath) {
-            this.svgPath.setAttribute('height', extent.y);
-            this.svgPath.setAttribute('width', extent.x);
+            const diffX = this.extent.x - extent.x;
+            const diffY = this.extent.y - extent.y;
+            // debugger;
+            const { x, y, width, height } = this.svgPath.viewBox.baseVal;
+            this.svgPath.setAttribute('viewBox', x + ' ' + y + ' ' + Math.abs(width + diffX) + ' ' + Math.abs(height + diffY));
           }
+          this.setProperty('extent', extent);
         }
       },
       fill: { defaultValue: Color.transparent },
